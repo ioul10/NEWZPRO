@@ -12,7 +12,35 @@ import base64
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from config.settings import COLORS
+def get_msi20_chart_html():
+    """Génère le graphique MSI20 en HTML"""
+    try:
+        from pages.bdc_statut import generate_msi20_chart
+        bourse_data = st.session_state.get('bourse_data', {})
+        fig = generate_msi20_chart(bourse_data)
+        return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    except:
+        return "<p>Graphique MSI20 non disponible</p>"
 
+def get_eur_mad_chart_html():
+    """Génère le graphique EUR/MAD en HTML"""
+    try:
+        from pages.bam import generate_fx_chart
+        excel_data = st.session_state.get('excel_data', {})
+        fig, _, _ = generate_fx_chart(excel_data, 'EUR/MAD')
+        return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    except:
+        return "<p>Graphique EUR/MAD non disponible</p>"
+
+def get_usd_mad_chart_html():
+    """Génère le graphique USD/MAD en HTML"""
+    try:
+        from pages.bam import generate_fx_chart
+        excel_data = st.session_state.get('excel_data', {})
+        fig, _, _ = generate_fx_chart(excel_data, 'USD/MAD')
+        return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    except:
+        return "<p>Graphique USD/MAD non disponible</p>"
 # -----------------------------------------------------------------------------
 # 1. INITIALISATION DE L'ÉTAT DE SESSION
 # -----------------------------------------------------------------------------
@@ -325,6 +353,12 @@ def generate_report_html():
         html += get_masi_chart_html()
         html += """
                 </div>
+                <h3>Évolution du MSI20</h3>
+                <div class="chart-container">
+        """
+        html += get_msi20_chart_html()
+        html += """
+                </div>
                 <h3>Top Movers</h3>
                 <table>
                     <tr><th>Valeur</th><th>Cours</th><th>Variation</th><th>Volume</th></tr>
@@ -350,6 +384,18 @@ def generate_report_html():
                 <div class="chart-container">
         """
         html += get_monias_chart_html()
+        html += """
+                </div>
+                <h3>Devises - EUR/MAD</h3>
+                <div class="chart-container">
+        """
+        html += get_eur_mad_chart_html()
+        html += """
+                </div>
+                <h3>Devises - USD/MAD</h3>
+                <div class="chart-container">
+        """
+        html += get_usd_mad_chart_html()
         html += """
                 </div>
             </div>
