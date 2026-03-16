@@ -227,12 +227,18 @@ def render():
     # SECTION 2 : SCRAPING BOURSE DE CASABLANCA
     # ---------------------------------------------------------------------
     st.markdown("### 2️⃣ Bourse de Casablanca (Scraping)")
-    if result.get('status') == 'success':
-    st.session_state.bourse_data = result
-    st.session_state.last_update = datetime.now()
-    st.success("✅ Données collectées !")
-    st.rerun()
-    col1, col2 = st.columns([3, 1])
+        if st.button("🔄 Lancer le scraping", use_container_width=True, 
+                     disabled=is_success):
+            with st.spinner("Collecte en cours..."):
+                result = scrape_bourse_casa()
+                
+                if result.get('status') == 'success':
+                    st.session_state.bourse_data = result  # ✅ Bien indenté
+                    st.session_state.last_update = datetime.now()
+                    st.success("✅ Données collectées !")
+                    st.rerun()
+                else:
+                    st.error("❌ Échec de la collecte")
     
     with col1:
         st.markdown("""
