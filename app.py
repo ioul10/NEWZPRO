@@ -1,21 +1,36 @@
 # =============================================================================
-# NEWZ - Application Principale
+# NEWZ - Application Principale (VERSION CORRIGÉE)
 # =============================================================================
 
 import streamlit as st
 from pathlib import Path
 import sys
 
-sys.path.append(str(Path(__file__).resolve().parent))
-from config.settings import APP_TITLE, APP_VERSION, COLORS
-
-# Configuration de la page
+# Configuration de la page (DOIT ÊTRE LA PREMIÈRE COMMANDE)
 st.set_page_config(
-    page_title=APP_TITLE,
+    page_title="Newz | Market Data",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Ajout du chemin pour les imports
+sys.path.append(str(Path(__file__).resolve().parent))
+
+# Import de la config
+try:
+    from config.settings import COLORS, APP_VERSION
+except:
+    COLORS = {
+        'primary': '#005696',
+        'secondary': '#003d6b',
+        'accent': '#00a8e8',
+        'success': '#28a745',
+        'warning': '#ffc107',
+        'danger': '#dc3545',
+        'light': '#f8f9fa'
+    }
+    APP_VERSION = "2.0.0"
 
 # CSS Personnalisé
 st.markdown(f"""
@@ -30,13 +45,16 @@ st.markdown(f"""
     }}
     .main-header h1 {{ margin: 0; font-size: 36px; }}
     .main-header p {{ margin: 10px 0 0 0; opacity: 0.9; }}
+    .stSidebar {{
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    }}
 </style>
 """, unsafe_allow_html=True)
 
 # Header
 st.markdown(f"""
 <div class="main-header">
-    <h1>NEWZ</h1>
+    <h1>🏦 CDG Capital</h1>
     <p><b>Newz</b> — Market Data Platform v{APP_VERSION}</p>
 </div>
 """, unsafe_allow_html=True)
@@ -48,21 +66,49 @@ menu = st.sidebar.radio(
     index=0
 )
 
+# Initialisation de l'état de session
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = "home"
+
 # Routage des pages
-if menu == "🏠 Accueil":
-    from pages.home import render
-    render()
-elif menu == "📥 Data Ingestion":
-    from pages.data_ingestion import render
-    render()
-elif menu == "📊 BDC Statut":
-    st.info("Page en cours de développement...")
-elif menu == "🏦 BAM":
-    st.info("Page en cours de développement...")
-elif menu == "📰 Macronews":
-    st.info("Page en cours de développement...")
-elif menu == "📤 Export":
-    st.info("Page en cours de développement...")
+try:
+    if menu == "🏠 Accueil":
+        from pages.home import render as render_home
+        render_home()
+    
+    elif menu == "📥 Data Ingestion":
+        from pages.data_ingestion import render as render_ingestion
+        render_ingestion()
+    
+    elif menu == "📊 BDC Statut":
+        from pages.bdc_statut import render as render_bdc
+        render_bdc()
+    
+    elif menu == "🏦 BAM":
+        from pages.bam import render as render_bam
+        render_bam()
+    
+    elif menu == "📰 Macronews":
+        st.info("📰 Page Macronews - En cours de développement")
+        st.markdown("""
+        Cette page affichera :
+        - Les actualités financières marocaines
+        - L'indice d'inflation
+        - Le calendrier économique
+        """)
+    
+    elif menu == "📤 Export":
+        st.info("📤 Page Export - En cours de développement")
+        st.markdown("""
+        Cette page permettra de :
+        - Générer des rapports HTML/PDF
+        - Exporter les graphiques
+        - Télécharger les données
+        """)
+
+except Exception as e:
+    st.error(f"❌ Erreur de chargement de la page : {str(e)}")
+    st.exception(e)
 
 # Footer
 st.sidebar.markdown("---")
