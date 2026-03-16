@@ -36,7 +36,7 @@ st.markdown(f"""
 # Header
 st.markdown(f"""
 <div class="main-header">
-    <h1>🏦 CDG Capital</h1>
+    <h1>NEWZ</h1>
     <p><b>Newz</b> — Market Data Platform v{APP_VERSION}</p>
 </div>
 """, unsafe_allow_html=True)
