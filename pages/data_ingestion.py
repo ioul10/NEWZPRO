@@ -21,7 +21,7 @@ if 'data_loaded' not in st.session_state:
 if 'excel_data' not in st.session_state:
     st.session_state.excel_data = {}
 if 'bourse_data' not in st.session_state:
-    st.session_state.bourse_data = {}
+    st.session_state.bourse_data = {}  # Initialiser comme dict vide
 if 'news_data' not in st.session_state:
     st.session_state.news_data = []
 if 'last_update' not in st.session_state:
@@ -253,7 +253,7 @@ def render():
     
     with col2:
         if st.button("🔄 Lancer le scraping", use_container_width=True, 
-                     disabled=st.session_state.bourse_data.get('status') == 'success'):
+                     disabled=st.session_state.get('bourse_data', {}).get('status') == 'success'):
             with st.spinner("Collecte en cours..."):
                 result = scrape_bourse_casa()
                 
