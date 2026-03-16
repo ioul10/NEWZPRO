@@ -1,5 +1,5 @@
 # =============================================================================
-# NEWZ - Page Data Ingestion (VERSION CORRIGÉE)
+# NEWZ - Page Data Ingestion (VERSION FINALE CORRIGÉE)
 # =============================================================================
 
 import streamlit as st
@@ -27,7 +27,6 @@ def init_session_state():
     if 'last_update' not in st.session_state:
         st.session_state.last_update = None
 
-# Appeler l'initialisation
 init_session_state()
 
 # -----------------------------------------------------------------------------
@@ -227,18 +226,8 @@ def render():
     # SECTION 2 : SCRAPING BOURSE DE CASABLANCA
     # ---------------------------------------------------------------------
     st.markdown("### 2️⃣ Bourse de Casablanca (Scraping)")
-        if st.button("🔄 Lancer le scraping", use_container_width=True, 
-                     disabled=is_success):
-            with st.spinner("Collecte en cours..."):
-                result = scrape_bourse_casa()
-                
-                if result.get('status') == 'success':
-                    st.session_state.bourse_data = result  # ✅ Bien indenté
-                    st.session_state.last_update = datetime.now()
-                    st.success("✅ Données collectées !")
-                    st.rerun()
-                else:
-                    st.error("❌ Échec de la collecte")
+    
+    col1, col2 = st.columns([3, 1])
     
     with col1:
         st.markdown("""
@@ -269,6 +258,7 @@ def render():
     # Afficher les données Bourse si disponibles
     bourse_data = st.session_state.get('bourse_data', {})
     if bourse_data.get('status') == 'success':
+        st.markdown("#### 📊 Données Collectées")
         col1, col2, col3 = st.columns(3)
         
         with col1:
