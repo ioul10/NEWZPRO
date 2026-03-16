@@ -287,7 +287,7 @@ def render():
     # ---------------------------------------------------------------------
     st.markdown("### 📊 Indice MONIA")
     
-    fig_monias = generate_monias_chart(excel_data)
+    fig_monias = generate_monia_chart(excel_data)
     st.plotly_chart(fig_monias, use_container_width=True)
     
     if excel_data and 'MONIA' in excel_data and not excel_data['MONIA'].empty:
