@@ -89,13 +89,8 @@ try:
         render_bam()
     
     elif menu == "📰 Macronews":
-        st.info("📰 Page Macronews - En cours de développement")
-        st.markdown("""
-        Cette page affichera :
-        - Les actualités financières marocaines
-        - L'indice d'inflation
-        - Le calendrier économique
-        """)
+        from pages.macronews import render as render_macronews
+        render_macronews()
     
     elif menu == "📤 Export":
         st.info("📤 Page Export - En cours de développement")
