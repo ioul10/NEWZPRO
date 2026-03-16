@@ -93,13 +93,8 @@ try:
         render_macronews()
     
     elif menu == "📤 Export":
-        st.info("📤 Page Export - En cours de développement")
-        st.markdown("""
-        Cette page permettra de :
-        - Générer des rapports HTML/PDF
-        - Exporter les graphiques
-        - Télécharger les données
-        """)
+        from pages.export import render as render_export
+        render_export()
 
 except Exception as e:
     st.error(f"❌ Erreur de chargement de la page : {str(e)}")
