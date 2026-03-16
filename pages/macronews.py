@@ -194,7 +194,7 @@ def render():
     # ---------------------------------------------------------------------
     st.markdown("### 📰 Flux d'Actualités")
     
-    if news_
+    if news_data:
         # Filtres
         col1, col2 = st.columns(2)
         
