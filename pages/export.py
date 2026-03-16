@@ -44,9 +44,15 @@ def get_usd_mad_chart_html():
 # -----------------------------------------------------------------------------
 # 1. INITIALISATION DE L'ÉTAT DE SESSION
 # -----------------------------------------------------------------------------
-if 'export_selected_sections' not in st.session_state:
-    st.session_state.export_selected_sections = ['summary', 'bdc', 'bam', 'inflation']
+def init_export_session():
+    """Initialise les variables de session pour l'export"""
+    if 'export_selected_sections' not in st.session_state:
+        st.session_state.export_selected_sections = ['summary', 'bdc', 'bam', 'inflation']
+    if 'report_html' not in st.session_state:
+        st.session_state.report_html = None
 
+# Appeler l'initialisation IMMÉDIATEMENT
+init_export_session()
 # -----------------------------------------------------------------------------
 # 2. FONCTIONS DE GÉNÉRATION DE GRAPHIQUES (SIMPLIFIÉES)
 # -----------------------------------------------------------------------------
