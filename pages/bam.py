@@ -1,5 +1,5 @@
 # =============================================================================
-# NEWZ - Page BAM (Bank Al-Maghrib)
+# NEWZ - Page BAM (Bank Al-Maghrib) - VERSION CORRIGÉE
 # =============================================================================
 
 import streamlit as st
@@ -19,19 +19,15 @@ from config.settings import COLORS
 def generate_bdt_curve_chart(excel_data):
     """Génère la courbe des taux BDT"""
     
-    # Essayer de charger les données depuis Excel
     if excel_data and 'Courbe MAD' in excel_data and not excel_data['Courbe MAD'].empty:
         df = excel_data['Courbe MAD']
-        # Adapter selon la structure réelle du fichier
         if 'tenor_mat' in df.columns and 'zero_rate' in df.columns:
             maturities = df['tenor_mat'].astype(str).tolist()
             rates = df['zero_rate'].tolist()
         else:
-            # Données par défaut
             maturities = ['1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '15Y', '20Y']
             rates = [2.43, 2.55, 2.68, 2.87, 3.05, 3.25, 3.40, 3.55]
     else:
-        # Données par défaut
         maturities = ['1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '15Y', '20Y']
         rates = [2.43, 2.55, 2.68, 2.87, 3.05, 3.25, 3.40, 3.55]
     
@@ -64,7 +60,6 @@ def generate_bdt_curve_chart(excel_data):
 def generate_monia_chart(excel_data):
     """Génère le graphique MONIA"""
     
-    # Essayer de charger les données depuis Excel
     if excel_data and 'MONIA' in excel_data and not excel_data['MONIA'].empty:
         df = excel_data['MONIA']
         if 'quote_date' in df.columns and 'rate' in df.columns:
@@ -73,11 +68,9 @@ def generate_monia_chart(excel_data):
             dates = df['quote_date'].tolist()
             rates = df['rate'].tolist()
         else:
-            # Données par défaut
             dates = pd.date_range(end=datetime.now(), periods=90, freq='B').tolist()
-            rates = (3.0 + np.cumsum(np.random.normal(0, 0.02, 90))).tolist()
+            rates = np.clip(3.0 + np.cumsum(np.random.normal(0, 0.02, 90)), 2.5, 3.5).tolist()
     else:
-        # Données par défaut
         dates = pd.date_range(end=datetime.now(), periods=90, freq='B').tolist()
         rates = np.clip(3.0 + np.cumsum(np.random.normal(0, 0.02, 90)), 2.5, 3.5).tolist()
     
@@ -92,7 +85,6 @@ def generate_monia_chart(excel_data):
         name='MONIA'
     ))
     
-    # Ligne de moyenne
     avg_rate = np.mean(rates[-30:]) if len(rates) >= 30 else np.mean(rates)
     fig.add_hline(
         y=avg_rate,
@@ -121,7 +113,6 @@ def generate_fx_chart(excel_data, pair='EUR/MAD'):
     
     sheet_name = 'EUR_MAD' if 'EUR' in pair else 'USD_MAD'
     
-    # Essayer de charger les données depuis Excel
     if excel_data and sheet_name in excel_data and not excel_data[sheet_name].empty:
         df = excel_data[sheet_name]
         if 'quote_date' in df.columns and 'Mid' in df.columns:
@@ -130,12 +121,10 @@ def generate_fx_chart(excel_data, pair='EUR/MAD'):
             dates = df['quote_date'].tolist()
             rates = df['Mid'].tolist()
         else:
-            # Données par défaut
             dates = pd.date_range(end=datetime.now(), periods=90, freq='B').tolist()
             base = 10.75 if 'EUR' in pair else 9.85
             rates = (base + np.cumsum(np.random.normal(0, 0.02, 90))).tolist()
     else:
-        # Données par défaut
         dates = pd.date_range(end=datetime.now(), periods=90, freq='B').tolist()
         base = 10.75 if 'EUR' in pair else 9.85
         rates = (base + np.cumsum(np.random.normal(0, 0.02, 90))).tolist()
@@ -173,7 +162,6 @@ def generate_fx_chart(excel_data, pair='EUR/MAD'):
 def generate_fx_comparison_chart(excel_data):
     """Génère un graphique comparatif EUR/MAD et USD/MAD"""
     
-    # EUR/MAD
     if excel_data and 'EUR_MAD' in excel_data and not excel_data['EUR_MAD'].empty:
         df_eur = excel_data['EUR_MAD']
         if 'quote_date' in df_eur.columns and 'Mid' in df_eur.columns:
@@ -188,7 +176,6 @@ def generate_fx_comparison_chart(excel_data):
         dates_eur = pd.date_range(end=datetime.now(), periods=90, freq='B').tolist()
         rates_eur = (10.75 + np.cumsum(np.random.normal(0, 0.02, 90))).tolist()
     
-    # USD/MAD
     if excel_data and 'USD_MAD' in excel_data and not excel_data['USD_MAD'].empty:
         df_usd = excel_data['USD_MAD']
         if 'quote_date' in df_usd.columns and 'Mid' in df_usd.columns:
@@ -253,11 +240,9 @@ def render():
     </div>
     """, unsafe_allow_html=True)
     
-    # Récupérer les données Excel de la session
     excel_data = st.session_state.get('excel_data', {})
     
-    # Vérifier si des données sont disponibles
-    has_data = bool(excel_data and any(not df.empty for df in excel_data.values()))
+    has_data = bool(excel_data and any(not df.empty for df in excel_data.values() if hasattr(df, 'empty')))
     
     if not has_data:
         st.warning("""
@@ -272,6 +257,7 @@ def render():
         if st.button("📥 Aller à Data Ingestion"):
             st.session_state.current_page = "data_ingestion"
             st.rerun()
+        return
     
     # ---------------------------------------------------------------------
     # SECTION 1 : COURBE DES TAUX BDT
@@ -281,7 +267,6 @@ def render():
     fig_bdt = generate_bdt_curve_chart(excel_data)
     st.plotly_chart(fig_bdt, use_container_width=True)
     
-    # Stats BDT
     if excel_data and 'Courbe MAD' in excel_data and not excel_data['Courbe MAD'].empty:
         df = excel_data['Courbe MAD']
         if 'zero_rate' in df.columns:
@@ -305,7 +290,6 @@ def render():
     fig_monias = generate_monias_chart(excel_data)
     st.plotly_chart(fig_monias, use_container_width=True)
     
-    # Stats MONIA
     if excel_data and 'MONIA' in excel_data and not excel_data['MONIA'].empty:
         df = excel_data['MONIA']
         if 'rate' in df.columns:
@@ -325,7 +309,6 @@ def render():
     # ---------------------------------------------------------------------
     st.markdown("### 💱 Devises (MAD)")
     
-    # Onglets pour les paires de devises
     tab1, tab2, tab3 = st.tabs(["📊 EUR/MAD", "📊 USD/MAD", "📊 Comparaison"])
     
     with tab1:
@@ -362,7 +345,6 @@ def render():
         **💡 Interprétation :**
         - Une hausse de EUR/MAD signifie un affaiblissement du Dirham face à l'Euro
         - Une hausse de USD/MAD signifie un affaiblissement du Dirham face au Dollar
-        - La comparaison permet de voir la performance relative des deux devises
         """)
     
     st.markdown("---")
@@ -372,10 +354,8 @@ def render():
     # ---------------------------------------------------------------------
     st.markdown("### 📋 Données Détaillées")
     
-    # Créer un tableau récapitulatif
     summary_data = []
     
-    # BDT
     if excel_data and 'Courbe MAD' in excel_data and not excel_data['Courbe MAD'].empty:
         df = excel_data['Courbe MAD']
         if 'zero_rate' in df.columns:
@@ -391,7 +371,6 @@ def render():
                 'Source': 'Courbe MAD'
             })
     
-    # MONIA
     if excel_data and 'MONIA' in excel_data and not excel_data['MONIA'].empty:
         df = excel_data['MONIA']
         if 'rate' in df.columns:
@@ -402,7 +381,6 @@ def render():
                 'Source': 'MONIA'
             })
     
-    # EUR/MAD
     if excel_data and 'EUR_MAD' in excel_data and not excel_data['EUR_MAD'].empty:
         df = excel_data['EUR_MAD']
         if 'Mid' in df.columns:
@@ -413,7 +391,6 @@ def render():
                 'Source': 'EUR_MAD'
             })
     
-    # USD/MAD
     if excel_data and 'USD_MAD' in excel_data and not excel_data['USD_MAD'].empty:
         df = excel_data['USD_MAD']
         if 'Mid' in df.columns:
@@ -427,11 +404,7 @@ def render():
     if summary_
         df_summary = pd.DataFrame(summary_data)
         st.dataframe(df_summary, use_container_width=True, hide_index=True)
-    else:
-        st.info("📊 Les données détaillées apparaîtront ici après l'upload du fichier Excel")
-    
-    # Bouton d'export
-    if summary_
+        
         csv = df_summary.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="📥 Télécharger le résumé en CSV",
@@ -440,10 +413,9 @@ def render():
             mime="text/csv",
             use_container_width=True
         )
+    else:
+        st.info("📊 Les données détaillées apparaîtront ici après l'upload du fichier Excel")
     
-    # ---------------------------------------------------------------------
-    # SECTION 5 : INFORMATIONS COMPLÉMENTAIRES
-    # ---------------------------------------------------------------------
     st.markdown("---")
     st.markdown("### ℹ️ Informations")
     
@@ -456,12 +428,6 @@ def render():
         - Courbe BDT : Fichier Excel (feuille: Courbe MAD)
         - MONIA : Fichier Excel (feuille: MONIA)
         - Devises : Fichier Excel (feuilles: EUR_MAD, USD_MAD)
-        
-        **🔄 Fréquence de mise à jour :**
-        
-        - Courbe BDT : Quotidienne
-        - MONIA : Quotidienne
-        - Devises : Quotidienne
         """)
     
     with col2:
@@ -471,10 +437,4 @@ def render():
         - **Courbe pentue** : Anticipations de croissance
         - **Courbe plate** : Incertitude économique
         - **Courbe inversée** : Risque de récession
-        
-        **📈 MONIA :**
-        
-        - Taux interbancaire au jour le jour
-        - Reflet de la liquidité du marché
-        - Influencé par la politique de BAM
         """)
