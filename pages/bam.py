@@ -401,7 +401,7 @@ def render():
                 'Source': 'USD_MAD'
             })
     
-    if summary_
+    if summary_data:
         df_summary = pd.DataFrame(summary_data)
         st.dataframe(df_summary, use_container_width=True, hide_index=True)
         
