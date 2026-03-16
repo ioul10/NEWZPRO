@@ -192,8 +192,32 @@ def render():
     </div>
     """, unsafe_allow_html=True)
     
-    # Récupérer les données de la session
+    # Récupérer les données de la session (CORRECTION ICI)
     bourse_data = st.session_state.get('bourse_data', {})
+    
+    # Vérifier si des données sont disponibles
+    if not bourse_data or bourse_data.get('status') != 'success':
+        st.warning("""
+        ⚠️ **Aucune donnée boursière disponible**
+        
+        Pour afficher les données :
+        1. Allez dans la page **📥 Data Ingestion**
+        2. Cliquez sur **"🔄 Lancer le scraping"** dans la section Bourse de Casablanca
+        3. Revenez sur cette page
+        """)
+        
+        if st.button("📥 Aller à Data Ingestion"):
+            st.session_state.current_page = "data_ingestion"
+            st.rerun()
+        
+        # Afficher quand même des données simulées pour le test
+        st.info("💡 Affichage de données de démonstration...")
+        bourse_data = {
+            'masi': {'value': 12450.50, 'change': 0.85, 'volume': 45000000},
+            'msi20': {'value': 1580.30, 'change': 1.20, 'volume': 38000000},
+            'status': 'demo'
+        }
+
     
     # ---------------------------------------------------------------------
     # SECTION 1 : KPIs PRINCIPAUX
