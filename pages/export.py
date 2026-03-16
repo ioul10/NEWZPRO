@@ -303,6 +303,12 @@ def generate_report_html():
 def render():
     """Fonction principale de la page Export"""
     
+    # Initialisation SÉCURISÉE du session_state
+    if 'export_selected_sections' not in st.session_state:
+        st.session_state.export_selected_sections = ['summary', 'bdc', 'bam', 'inflation']
+    if 'report_html' not in st.session_state:
+        st.session_state.report_html = None
+    
     st.markdown(f"""
     <div style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 25px;">
         <h2 style="color: {COLORS['primary']}; margin: 0;">📤 Export de Rapport</h2>
