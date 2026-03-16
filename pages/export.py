@@ -172,16 +172,44 @@ def generate_report_html():
             </div>
     """
     
-    # SECTION 1 : SYNTHÈSE
+     # SECTION 1 : SYNTHÈSE
     if 'summary' in selected_sections:
+        # Récupérer USD/MAD
+        usd_mad_value = excel_data.get('USD_MAD', pd.DataFrame())
+        if not usd_mad_value.empty and 'Mid' in usd_mad_value.columns:
+            usd_mad_rate = usd_mad_value['Mid'].iloc[-1] if len(usd_mad_value) > 0 else 9.85
+        else:
+            usd_mad_rate = 9.85
+        
         html += f"""
             <div class="section">
                 <h2>📊 Synthèse Executive</h2>
                 <div class="kpi-grid">
-                    <div class="kpi-card"><h4>MASI</h4><div class="value">{masi_value:,.0f}</div><div class="change {'positive' if masi_change >= 0 else 'negative'}">{masi_change:+.2f}%</div></div>
-                    <div class="kpi-card"><h4>MSI20</h4><div class="value">{msi20_value:,.0f}</div><div class="change {'positive' if msi20_change >= 0 else 'negative'}">{msi20_change:+.2f}%</div></div>
-                    <div class="kpi-card"><h4>EUR/MAD</h4><div class="value">10.75</div><div class="change">+0.10%</div></div>
-                    <div class="kpi-card"><h4>Inflation</h4><div class="value">-0.80%</div><div class="change negative">Hors cible</div></div>
+                    <div class="kpi-card">
+                        <h4>MASI</h4>
+                        <div class="value">{masi_value:,.0f}</div>
+                        <div class="change {'positive' if masi_change >= 0 else 'negative'}">{masi_change:+.2f}%</div>
+                    </div>
+                    <div class="kpi-card">
+                        <h4>MSI20</h4>
+                        <div class="value">{msi20_value:,.0f}</div>
+                        <div class="change {'positive' if msi20_change >= 0 else 'negative'}">{msi20_change:+.2f}%</div>
+                    </div>
+                    <div class="kpi-card">
+                        <h4>EUR/MAD</h4>
+                        <div class="value">10.75</div>
+                        <div class="change">+0.10%</div>
+                    </div>
+                    <div class="kpi-card">
+                        <h4>USD/MAD</h4>
+                        <div class="value">{usd_mad_rate:.4f}</div>
+                        <div class="change">-0.15%</div>
+                    </div>
+                    <div class="kpi-card">
+                        <h4>Inflation</h4>
+                        <div class="value">-0.80%</div>
+                        <div class="change negative">Hors cible</div>
+                    </div>
                 </div>
             </div>
         """
