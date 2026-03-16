@@ -12,16 +12,7 @@ def render():
         <p style="font-size: 16px; line-height: 1.6;">
             Plateforme de market data pour CDG Capital.
         </p>
-        <p style="font-size: 16px; line-height: 1.6;">
-            Cette application vous permet de :
-        </p>
-        <ul style="font-size: 16px; line-height: 1.8;">
-            <li>📥 <b>Importer</b> des données depuis Excel (BDT, FX, MONIA)</li>
-            <li>📊 <b>Visualiser</b> les indices boursiers (MASI, MSI20)</li>
-            <li>🏦 <b>Analyser</b> les courbes de taux et devises</li>
-            <li>📰 <b>Suivre</b> l'actualité financière marocaine</li>
-            <li>📤 <b>Générer</b> des rapports professionnels</li>
-        </ul>
+        
     </div>
     
     <div style="margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
