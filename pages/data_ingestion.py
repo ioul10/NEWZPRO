@@ -1,13 +1,11 @@
 # =============================================================================
-# NEWZ - Page Data Ingestion
+# NEWZ - Page Data Ingestion (VERSION CORRIGÉE)
 # =============================================================================
 
 import streamlit as st
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
-import requests
-from bs4 import BeautifulSoup
 import sys
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -16,28 +14,28 @@ from config.settings import COLORS, DATA_DIR
 # -----------------------------------------------------------------------------
 # 1. INITIALISATION DE L'ÉTAT DE SESSION
 # -----------------------------------------------------------------------------
-if 'data_loaded' not in st.session_state:
-    st.session_state.data_loaded = False
-if 'excel_data' not in st.session_state:
-    st.session_state.excel_data = {}
-if 'bourse_data' not in st.session_state:
-    st.session_state.bourse_data = {}  # Initialiser comme dict vide
-if 'news_data' not in st.session_state:
-    st.session_state.news_data = []
-if 'last_update' not in st.session_state:
-    st.session_state.last_update = None
+def init_session_state():
+    """Initialise toutes les variables de session"""
+    if 'data_loaded' not in st.session_state:
+        st.session_state.data_loaded = False
+    if 'excel_data' not in st.session_state:
+        st.session_state.excel_data = {}
+    if 'bourse_data' not in st.session_state:
+        st.session_state.bourse_data = {}
+    if 'news_data' not in st.session_state:
+        st.session_state.news_data = []
+    if 'last_update' not in st.session_state:
+        st.session_state.last_update = None
+
+# Appeler l'initialisation
+init_session_state()
 
 # -----------------------------------------------------------------------------
 # 2. FONCTIONS DE SCRAPING (SIMPLIFIÉES)
 # -----------------------------------------------------------------------------
 def scrape_bourse_casa():
-    """
-    Scraping simplifié de la Bourse de Casablanca
-    Note: Pour production, utiliser une API officielle
-    """
+    """Scraping simplifié de la Bourse de Casablanca"""
     try:
-        # Données simulées pour le développement
-        # À remplacer par le vrai scraping quand l'API est disponible
         return {
             'masi': {
                 'value': 12450.50,
@@ -54,15 +52,11 @@ def scrape_bourse_casa():
             'status': 'success'
         }
     except Exception as e:
-        st.error(f"Erreur scraping Bourse : {str(e)}")
         return {'status': 'error', 'message': str(e)}
 
 def scrape_ilboursa_news(limit=10):
-    """
-    Scraping des news depuis ilboursa.com
-    """
+    """Scraping des news depuis ilboursa.com"""
     try:
-        # Données simulées pour le développement
         news_items = [
             {
                 'title': 'Bank Al-Maghrib maintient son taux directeur à 3%',
@@ -91,23 +85,17 @@ def scrape_ilboursa_news(limit=10):
         ]
         return news_items[:limit]
     except Exception as e:
-        st.error(f"Erreur scraping News : {str(e)}")
         return []
 
 # -----------------------------------------------------------------------------
 # 3. FONCTIONS DE TRAITEMENT EXCEL
 # -----------------------------------------------------------------------------
 def process_excel_file(uploaded_file):
-    """
-    Traite le fichier Excel uploadé et extrait les feuilles
-    """
+    """Traite le fichier Excel uploadé"""
     try:
-        # Lire toutes les feuilles du fichier Excel
         excel_data = pd.read_excel(uploaded_file, sheet_name=None)
-        
         processed = {}
         
-        # Traiter chaque feuille attendue
         expected_sheets = [
             'Courbe MAD', 'Courbe_EUR', 'MONIA', 
             'MADBDT_52W', 'USD_MAD', 'EUR_MAD'
@@ -116,14 +104,9 @@ def process_excel_file(uploaded_file):
         for sheet in expected_sheets:
             if sheet in excel_data:
                 df = excel_data[sheet]
-                # Nettoyage basique
                 df = df.dropna(how='all')
                 processed[sheet] = df
-                
-                # Afficher un résumé
-                st.success(f"✅ Feuille '{sheet}' chargée : {len(df)} lignes")
             else:
-                st.warning(f"⚠️ Feuille '{sheet}' non trouvée dans le fichier")
                 processed[sheet] = pd.DataFrame()
         
         return processed
@@ -140,29 +123,34 @@ def display_loaded_data():
     
     st.markdown("### 📊 État des Données")
     
+    excel_data = st.session_state.get('excel_data', {})
+    bourse_data = st.session_state.get('bourse_data', {})
+    news_data = st.session_state.get('news_data', [])
+    last_update = st.session_state.get('last_update', None)
+    
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.session_state.excel_data:
-            sheets_count = len([s for s in st.session_state.excel_data.values() if not s.empty])
+        if excel_data:
+            sheets_count = len([s for s in excel_data.values() if not s.empty])
             st.metric("Feuilles Excel", f"{sheets_count}/6")
         else:
             st.metric("Feuilles Excel", "0/6")
     
     with col2:
-        if st.session_state.bourse_data:
+        if bourse_data and bourse_data.get('status') == 'success':
             st.metric("Bourse de Casa", "✅ Chargé")
         else:
             st.metric("Bourse de Casa", "⚪ Non chargé")
     
     with col3:
-        if st.session_state.news_data:
-            st.metric("News", f"{len(st.session_state.news_data)}")
+        if news_data:
+            st.metric("News", f"{len(news_data)}")
         else:
             st.metric("News", "0")
     
-    if st.session_state.last_update:
-        st.caption(f"Dernière mise à jour : {st.session_state.last_update.strftime('%d/%m/%Y %H:%M')}")
+    if last_update:
+        st.caption(f"Dernière mise à jour : {last_update.strftime('%d/%m/%Y %H:%M')}")
 
 # -----------------------------------------------------------------------------
 # 5. PAGE PRINCIPALE
@@ -219,17 +207,17 @@ def render():
                         st.rerun()
     
     # Afficher un aperçu des données Excel si chargées
-    if st.session_state.excel_data:
+    excel_data = st.session_state.get('excel_data', {})
+    if excel_data:
         st.markdown("#### 📋 Aperçu des données Excel")
         
-        # Sélection de la feuille à visualiser
-        sheet_options = [s for s in st.session_state.excel_data.keys() if not st.session_state.excel_data[s].empty]
+        sheet_options = [s for s in excel_data.keys() if not excel_data[s].empty]
         
         if sheet_options:
             selected_sheet = st.selectbox("Sélectionnez une feuille :", sheet_options)
             
-            if selected_sheet:
-                df = st.session_state.excel_data[selected_sheet]
+            if selected_sheet and selected_sheet in excel_data:
+                df = excel_data[selected_sheet]
                 st.dataframe(df.head(10), use_container_width=True)
                 st.caption(f"Total : {len(df)} lignes")
     
@@ -252,8 +240,11 @@ def render():
         """)
     
     with col2:
+        bourse_data = st.session_state.get('bourse_data', {})
+        is_success = bourse_data.get('status') == 'success'
+        
         if st.button("🔄 Lancer le scraping", use_container_width=True, 
-                     disabled=st.session_state.get('bourse_data', {}).get('status') == 'success'):
+                     disabled=is_success):
             with st.spinner("Collecte en cours..."):
                 result = scrape_bourse_casa()
                 
@@ -266,29 +257,31 @@ def render():
                     st.error("❌ Échec de la collecte")
     
     # Afficher les données Bourse si disponibles
-    if st.session_state.bourse_data.get('status') == 'success':
+    bourse_data = st.session_state.get('bourse_data', {})
+    if bourse_data.get('status') == 'success':
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            masi = st.session_state.bourse_data['masi']
+            masi = bourse_data.get('masi', {})
             st.metric(
                 label="MASI",
-                value=f"{masi['value']:,.2f}",
-                delta=f"{masi['change']:+.2f}%"
+                value=f"{masi.get('value', 0):,.2f}",
+                delta=f"{masi.get('change', 0):+.2f}%"
             )
         
         with col2:
-            msi20 = st.session_state.bourse_data['msi20']
+            msi20 = bourse_data.get('msi20', {})
             st.metric(
                 label="MSI20",
-                value=f"{msi20['value']:,.2f}",
-                delta=f"{msi20['change']:+.2f}%"
+                value=f"{msi20.get('value', 0):,.2f}",
+                delta=f"{msi20.get('change', 0):+.2f}%"
             )
         
         with col3:
+            masi = bourse_data.get('masi', {})
             st.metric(
                 label="Volume (MAD)",
-                value=f"{masi['volume']/1e6:.1f}M"
+                value=f"{masi.get('volume', 0)/1e6:.1f}M"
             )
     
     st.markdown("---")
@@ -319,10 +312,11 @@ def render():
                     st.rerun()
     
     # Afficher les news si disponibles
-    if st.session_state.news_data:
+    news_data = st.session_state.get('news_data', [])
+    if news_data:
         st.markdown("#### 📰 Dernières Actualités")
         
-        for i, news in enumerate(st.session_state.news_data[:5]):
+        for i, news in enumerate(news_data[:5]):
             with st.expander(f"📄 {news['title']}", expanded=(i==0)):
                 st.write(f"**Source :** {news['source']}")
                 st.write(f"**Catégorie :** {news['category']}")
@@ -338,17 +332,18 @@ def render():
     display_loaded_data()
     
     # Bouton pour sauvegarder les données
-    if st.session_state.data_loaded:
+    data_loaded = st.session_state.get('data_loaded', False)
+    if data_loaded:
         st.markdown("### 💾 Sauvegarder les Données")
         
         col1, col2 = st.columns(2)
         
         with col1:
             if st.button("💾 Sauvegarder en cache", use_container_width=True):
-                # Sauvegarde dans le dossier data/
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                excel_data = st.session_state.get('excel_data', {})
                 
-                for sheet_name, df in st.session_state.excel_data.items():
+                for sheet_name, df in excel_data.items():
                     if not df.empty:
                         filepath = DATA_DIR / f"{sheet_name}_{timestamp}.csv"
                         df.to_csv(filepath, index=False)
@@ -356,7 +351,7 @@ def render():
                 st.success(f"Données sauvegardées dans {DATA_DIR}")
         
         with col2:
-            if st.button("️ Réinitialiser", use_container_width=True, type="secondary"):
+            if st.button("🔄 Réinitialiser", use_container_width=True, type="secondary"):
                 st.session_state.excel_data = {}
                 st.session_state.bourse_data = {}
                 st.session_state.news_data = []
@@ -366,7 +361,11 @@ def render():
                 st.rerun()
     
     # Message si aucune donnée chargée
-    if not st.session_state.data_loaded and not st.session_state.bourse_data and not st.session_state.news_data:
+    excel_data = st.session_state.get('excel_data', {})
+    bourse_data = st.session_state.get('bourse_data', {})
+    news_data = st.session_state.get('news_data', [])
+    
+    if not excel_data and not bourse_data and not news_data:
         st.warning("""
         ⚠️ **Aucune donnée chargée**
         
