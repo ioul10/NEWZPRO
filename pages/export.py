@@ -232,23 +232,25 @@ def generate_report_html():
             </div>
         """
     
-    # SECTION 5 : NEWS
-    if 'news' in selected_sections and news_data:
-        html += """
+       # SECTION 5 : NEWS (Version simplifiée)
+    if 'news' in selected_sections:
+        news_data = st.session_state.get('news_data', [])
+        if news_data:
+            html += """
             <div class="section">
                 <h2>📰 Actualités Marquantes</h2>
-        """
-        for news in news_data[:5]:
-            html += f"""
+            """
+            for news in news_data[:5]:
+                html += f"""
                 <div class="news-item">
                     <h4>{news['title']}</h4>
                     <p><b>Source :</b> {news['source']} | <b>Catégorie :</b> {news['category']}</p>
                     <p>{news['summary']}</p>
                 </div>
-            """
-        html += """
+                """
+            html += """
             </div>
-        """
+            """
     
     # Footer
     html += f"""
@@ -267,7 +269,6 @@ def generate_report_html():
     """
     
     return html
-
 # -----------------------------------------------------------------------------
 # 4. PAGE PRINCIPALE
 # -----------------------------------------------------------------------------
