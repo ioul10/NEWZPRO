@@ -1,162 +1,98 @@
 # =============================================================================
-# NEWZ - Page Data Ingestion (VERSION FINALE CORRIGÉE)
+# NEWZ - Page Data Ingestion
+# Fichier : pages/data_ingestion.py
 # =============================================================================
 
 import streamlit as st
 import pandas as pd
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 import sys
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from config.settings import COLORS, DATA_DIR
+
+# Import sécurisé de la configuration
+try:
+    from config.settings import COLORS, DATA_DIR, MSI20_COMPOSITION
+except ImportError:
+    COLORS = {'primary': '#005696', 'success': '#28a745', 'danger': '#dc3545'}
+    DATA_DIR = Path(__file__).parent.parent / 'data'
+    MSI20_COMPOSITION = []
 
 # -----------------------------------------------------------------------------
-# 1. INITIALISATION DE L'ÉTAT DE SESSION
+# INITIALISATION LOCALE
 # -----------------------------------------------------------------------------
-def init_session_state():
-    """Initialise toutes les variables de session"""
-    if 'data_loaded' not in st.session_state:
-        st.session_state.data_loaded = False
+
+def init_local_session():
+    """Initialise les variables spécifiques à cette page"""
     if 'excel_data' not in st.session_state:
         st.session_state.excel_data = {}
     if 'bourse_data' not in st.session_state:
         st.session_state.bourse_data = {}
     if 'news_data' not in st.session_state:
         st.session_state.news_data = []
+    if 'actions_data' not in st.session_state:
+        st.session_state.actions_data = None
     if 'last_update' not in st.session_state:
         st.session_state.last_update = None
 
-init_session_state()
+init_local_session()
 
 # -----------------------------------------------------------------------------
-# 2. FONCTIONS DE SCRAPING (SIMPLIFIÉES)
+# FONCTIONS DE TRAITEMENT
 # -----------------------------------------------------------------------------
+
+def process_excel_file(uploaded_file):
+    """Traite un fichier Excel uploadé"""
+    try:
+        excel_data = pd.read_excel(uploaded_file, sheet_name=None)
+        processed = {}
+        
+        expected_sheets = ['Courbe MAD', 'Courbe_EUR', 'MONIA', 'MADBDT_52W', 'USD_MAD', 'EUR_MAD']
+        
+        for sheet in expected_sheets:
+            if sheet in excel_data:
+                df = excel_data[sheet].dropna(how='all')
+                processed[sheet] = df
+            else:
+                processed[sheet] = pd.DataFrame()
+        
+        return processed
+    except Exception as e:
+        st.error(f"Erreur lecture Excel : {str(e)}")
+        return None
+
 def scrape_bourse_casa():
-    """Scraping simplifié de la Bourse de Casablanca"""
+    """Scraping simulé de la Bourse de Casablanca"""
     try:
         return {
-            'masi': {
-                'value': 12450.50,
-                'change': 0.85,
-                'volume': 45000000,
-                'timestamp': datetime.now()
-            },
-            'msi20': {
-                'value': 1580.30,
-                'change': 1.20,
-                'volume': 38000000,
-                'timestamp': datetime.now()
-            },
+            'masi': {'value': 12450.50, 'change': 0.85, 'volume': 45000000, 'timestamp': datetime.now()},
+            'msi20': {'value': 1580.30, 'change': 1.20, 'volume': 38000000, 'timestamp': datetime.now()},
             'status': 'success'
         }
     except Exception as e:
         return {'status': 'error', 'message': str(e)}
 
 def scrape_ilboursa_news(limit=10):
-    """Scraping des news depuis ilboursa.com"""
+    """Scraping simulé des news Ilboursa"""
     try:
         news_items = [
-            {
-                'title': 'Bank Al-Maghrib maintient son taux directeur à 3%',
-                'summary': 'Le conseil de Bank Al-Maghrib a décidé de maintenir son taux directeur...',
-                'source': 'Ilboursa',
-                'timestamp': datetime.now(),
-                'url': 'https://www.ilboursa.com',
-                'category': 'Monétaire'
-            },
-            {
-                'title': 'Le MASI franchit la barre des 12 500 points',
-                'summary': 'La bourse de Casablanca a clôturé en hausse de 0.85%...',
-                'source': 'Ilboursa',
-                'timestamp': datetime.now(),
-                'url': 'https://www.ilboursa.com',
-                'category': 'Marché'
-            },
-            {
-                'title': 'L\'inflation au Maroc ralentit à 0,8% en glissement annuel',
-                'summary': 'Selon le HCP, l\'inflation a continué de ralentir...',
-                'source': 'Ilboursa',
-                'timestamp': datetime.now(),
-                'url': 'https://www.ilboursa.com',
-                'category': 'Économie'
-            }
+            {'title': 'Bank Al-Maghrib maintient son taux directeur à 3%', 'summary': 'Le conseil de BAM a décidé de maintenir son taux...', 'source': 'Ilboursa', 'timestamp': datetime.now(), 'url': 'https://www.ilboursa.com', 'category': 'Monétaire'},
+            {'title': 'Le MASI franchit la barre des 12 500 points', 'summary': 'La bourse de Casablanca a clôturé en hausse...', 'source': 'Ilboursa', 'timestamp': datetime.now(), 'url': 'https://www.ilboursa.com', 'category': 'Marché'},
+            {'title': 'L\'inflation au Maroc ralentit à 0,8%', 'summary': 'Selon le HCP, l\'inflation a continué de ralentir...', 'source': 'Ilboursa', 'timestamp': datetime.now(), 'url': 'https://www.ilboursa.com', 'category': 'Économie'}
         ]
         return news_items[:limit]
-    except Exception as e:
+    except:
         return []
 
 # -----------------------------------------------------------------------------
-# 3. FONCTIONS DE TRAITEMENT EXCEL
+# FONCTION PRINCIPALE
 # -----------------------------------------------------------------------------
-def process_excel_file(uploaded_file):
-    """Traite le fichier Excel uploadé"""
-    try:
-        excel_data = pd.read_excel(uploaded_file, sheet_name=None)
-        processed = {}
-        
-        expected_sheets = [
-            'Courbe MAD', 'Courbe_EUR', 'MONIA', 
-            'MADBDT_52W', 'USD_MAD', 'EUR_MAD'
-        ]
-        
-        for sheet in expected_sheets:
-            if sheet in excel_data:
-                df = excel_data[sheet]
-                df = df.dropna(how='all')
-                processed[sheet] = df
-            else:
-                processed[sheet] = pd.DataFrame()
-        
-        return processed
-    
-    except Exception as e:
-        st.error(f"Erreur de lecture Excel : {str(e)}")
-        return None
 
-# -----------------------------------------------------------------------------
-# 4. AFFICHAGE DES DONNÉES CHARGÉES
-# -----------------------------------------------------------------------------
-def display_loaded_data():
-    """Affiche un résumé des données chargées"""
-    
-    st.markdown("### 📊 État des Données")
-    
-    excel_data = st.session_state.get('excel_data', {})
-    bourse_data = st.session_state.get('bourse_data', {})
-    news_data = st.session_state.get('news_data', [])
-    last_update = st.session_state.get('last_update', None)
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if excel_data:
-            sheets_count = len([s for s in excel_data.values() if not s.empty])
-            st.metric("Feuilles Excel", f"{sheets_count}/6")
-        else:
-            st.metric("Feuilles Excel", "0/6")
-    
-    with col2:
-        if bourse_data and bourse_data.get('status') == 'success':
-            st.metric("Bourse de Casa", "✅ Chargé")
-        else:
-            st.metric("Bourse de Casa", "⚪ Non chargé")
-    
-    with col3:
-        if news_data:
-            st.metric("News", f"{len(news_data)}")
-        else:
-            st.metric("News", "0")
-    
-    if last_update:
-        st.caption(f"Dernière mise à jour : {last_update.strftime('%d/%m/%Y %H:%M')}")
-
-# -----------------------------------------------------------------------------
-# 5. PAGE PRINCIPALE
-# -----------------------------------------------------------------------------
 def render():
     """Fonction principale de la page Data Ingestion"""
     
+    # HEADER
     st.markdown(f"""
     <div style="background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 25px;">
         <h2 style="color: {COLORS['primary']}; margin: 0;">📥 Data Ingestion</h2>
@@ -170,62 +106,48 @@ def render():
     st.markdown("### 1️⃣ Import des Données Structurées (Excel)")
     
     st.info("""
-    **📋 Structure du fichier Excel attendu :**
-    
-    Le fichier doit contenir les feuilles suivantes :
+    **📋 Structure attendue :**
     - `Courbe MAD` : ccy_iso, hist_date, tenor_mat, zero_rate
-    - `Courbe_EUR` : devise, date_transaction, tenor, date_echeance, taux_zero_coupon_euro_bond
+    - `Courbe_EUR` : devise, date_transaction, tenor, taux_zero_coupon
     - `MONIA` : quote_date, rate
-    - `MADBDT_52W` : ccy_iso, tenor_label, hist_date, zero_date
-    - `USD_MAD` : iso_code1, quote_date, ask, bid, Mid
-    - `EUR_MAD` : iso_code1, quote_date, ask, bid, Mid
+    - `USD_MAD` / `EUR_MAD` : iso_code1, quote_date, ask, bid, Mid
     """)
     
-    uploaded_file = st.file_uploader(
-        "📁 Sélectionnez votre fichier Excel",
-        type=['xlsx', 'xls'],
-        help="Téléchargez le fichier contenant les données BDT, FX, MONIA"
-    )
+    uploaded_file = st.file_uploader("📁 Sélectionnez votre fichier Excel", type=['xlsx', 'xls'])
     
     if uploaded_file is not None:
         col1, col2 = st.columns([3, 1])
         
         with col1:
-            st.success(f"Fichier sélectionné : **{uploaded_file.name}**")
+            st.success(f"Fichier : **{uploaded_file.name}**")
         
         with col2:
-            if st.button("🔄 Traiter le fichier", use_container_width=True):
-                with st.spinner("Traitement en cours..."):
+            if st.button("🔄 Traiter", use_container_width=True):
+                with st.spinner("Traitement..."):
                     processed = process_excel_file(uploaded_file)
-                    
                     if processed:
                         st.session_state.excel_data = processed
-                        st.session_state.data_loaded = True
                         st.session_state.last_update = datetime.now()
-                        st.success("✅ Fichier traité avec succès !")
+                        st.success("✅ Fichier traité !")
                         st.rerun()
     
-    # Afficher un aperçu des données Excel si chargées
+    # Aperçu des données Excel
     excel_data = st.session_state.get('excel_data', {})
     if excel_data:
-        st.markdown("#### 📋 Aperçu des données Excel")
-        
+        st.markdown("#### 📋 Aperçu")
         sheet_options = [s for s in excel_data.keys() if not excel_data[s].empty]
-        
         if sheet_options:
-            selected_sheet = st.selectbox("Sélectionnez une feuille :", sheet_options)
-            
-            if selected_sheet and selected_sheet in excel_data:
-                df = excel_data[selected_sheet]
-                st.dataframe(df.head(10), use_container_width=True)
-                st.caption(f"Total : {len(df)} lignes")
+            selected = st.selectbox("Feuille :", sheet_options)
+            if selected:
+                st.dataframe(excel_data[selected].head(10), use_container_width=True)
+                st.caption(f"Total : {len(excel_data[selected])} lignes")
     
     st.markdown("---")
     
     # ---------------------------------------------------------------------
-    # SECTION 2 : SCRAPING BOURSE DE CASABLANCA
+    # SECTION 2 : BOURSE DE CASABLANCA
     # ---------------------------------------------------------------------
-    st.markdown("### 2️⃣ Bourse de Casablanca (Scraping)")
+    st.markdown("### 2️⃣ Bourse de Casablanca")
     
     col1, col2 = st.columns([3, 1])
     
@@ -233,144 +155,102 @@ def render():
         st.markdown("""
         **Données collectées :**
         - MASI (indice général)
-        - MSI20 (indice des 20 valeurs les plus liquides)
+        - MSI20 (20 valeurs liquides)
         - Volumes échangés
-        - Variations en temps réel
         """)
     
     with col2:
         bourse_data = st.session_state.get('bourse_data', {})
         is_success = bourse_data.get('status') == 'success'
         
-        if st.button("🔄 Lancer le scraping", use_container_width=True, 
-                     disabled=is_success):
-            with st.spinner("Collecte en cours..."):
+        if st.button("🔄 Scraper", use_container_width=True, disabled=is_success):
+            with st.spinner("Collecte..."):
                 result = scrape_bourse_casa()
-                
                 if result.get('status') == 'success':
                     st.session_state.bourse_data = result
                     st.session_state.last_update = datetime.now()
                     st.success("✅ Données collectées !")
                     st.rerun()
                 else:
-                    st.error("❌ Échec de la collecte")
+                    st.error("❌ Échec")
     
-    # Afficher les données Bourse si disponibles
+    # Affichage des données Bourse
     bourse_data = st.session_state.get('bourse_data', {})
     if bourse_data.get('status') == 'success':
-        st.markdown("#### 📊 Données Collectées")
         col1, col2, col3 = st.columns(3)
-        
         with col1:
             masi = bourse_data.get('masi', {})
-            st.metric(
-                label="MASI",
-                value=f"{masi.get('value', 0):,.2f}",
-                delta=f"{masi.get('change', 0):+.2f}%"
-            )
-        
+            st.metric("MASI", f"{masi.get('value', 0):,.2f}", f"{masi.get('change', 0):+.2f}%")
         with col2:
             msi20 = bourse_data.get('msi20', {})
-            st.metric(
-                label="MSI20",
-                value=f"{msi20.get('value', 0):,.2f}",
-                delta=f"{msi20.get('change', 0):+.2f}%"
-            )
-        
+            st.metric("MSI20", f"{msi20.get('value', 0):,.2f}", f"{msi20.get('change', 0):+.2f}%")
         with col3:
-            masi = bourse_data.get('masi', {})
-            st.metric(
-                label="Volume (MAD)",
-                value=f"{masi.get('volume', 0)/1e6:.1f}M"
-            )
+            st.metric("Volume", f"{bourse_data.get('masi', {}).get('volume', 0)/1e6:.1f}M MAD")
     
     st.markdown("---")
     
     # ---------------------------------------------------------------------
-    # SECTION 3 : SCRAPING NEWS ILBOURSA
+    # SECTION 3 : NEWS ILBOURSA
     # ---------------------------------------------------------------------
-    st.markdown("### 3️⃣ Actualités Financières (Ilboursa)")
+    st.markdown("### 3️⃣ Actualités Financières")
     
     col1, col2 = st.columns([3, 1])
     
     with col1:
-        st.markdown("""
-        **Sources :**
-        - www.ilboursa.com
-        - Catégories : Monétaire, Marché, Économie, Entreprises
-        """)
+        st.markdown("**Source :** www.ilboursa.com")
     
     with col2:
-        if st.button("📰 Collecter les news", use_container_width=True):
-            with st.spinner("Collecte en cours..."):
+        if st.button("📰 Collecter", use_container_width=True):
+            with st.spinner("Collecte..."):
                 news = scrape_ilboursa_news(limit=10)
-                
                 if news:
                     st.session_state.news_data = news
                     st.session_state.last_update = datetime.now()
                     st.success(f"✅ {len(news)} news collectées !")
                     st.rerun()
     
-    # Afficher les news si disponibles
+    # Affichage des news
     news_data = st.session_state.get('news_data', [])
     if news_data:
-        st.markdown("#### 📰 Dernières Actualités")
-        
         for i, news in enumerate(news_data[:5]):
             with st.expander(f"📄 {news['title']}", expanded=(i==0)):
-                st.write(f"**Source :** {news['source']}")
-                st.write(f"**Catégorie :** {news['category']}")
+                st.write(f"**Source :** {news['source']} | **Catégorie :** {news['category']}")
                 st.write(f"**Date :** {news['timestamp'].strftime('%d/%m/%Y %H:%M')}")
                 st.write(news['summary'])
-                st.markdown(f"[Lire la suite →]({news['url']})")
     
     st.markdown("---")
     
     # ---------------------------------------------------------------------
-    # SECTION 4 : RÉSUMÉ ET EXPORT
+    # SECTION 4 : RÉSUMÉ
     # ---------------------------------------------------------------------
-    display_loaded_data()
+    st.markdown("### 📊 Résumé")
     
-    # Bouton pour sauvegarder les données
-    data_loaded = st.session_state.get('data_loaded', False)
-    if data_loaded:
-        st.markdown("### 💾 Sauvegarder les Données")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if st.button("💾 Sauvegarder en cache", use_container_width=True):
-                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                excel_data = st.session_state.get('excel_data', {})
-                
-                for sheet_name, df in excel_data.items():
-                    if not df.empty:
-                        filepath = DATA_DIR / f"{sheet_name}_{timestamp}.csv"
-                        df.to_csv(filepath, index=False)
-                
-                st.success(f"Données sauvegardées dans {DATA_DIR}")
-        
-        with col2:
-            if st.button("🔄 Réinitialiser", use_container_width=True, type="secondary"):
-                st.session_state.excel_data = {}
-                st.session_state.bourse_data = {}
-                st.session_state.news_data = []
-                st.session_state.data_loaded = False
-                st.session_state.last_update = None
-                st.success("Données réinitialisées !")
-                st.rerun()
+    col1, col2, col3 = st.columns(3)
     
-    # Message si aucune donnée chargée
-    excel_data = st.session_state.get('excel_data', {})
-    bourse_data = st.session_state.get('bourse_data', {})
-    news_data = st.session_state.get('news_data', [])
+    with col1:
+        sheets = len([s for s in excel_data.values() if not s.empty]) if excel_data else 0
+        st.metric("Feuilles Excel", f"{sheets}/6")
     
-    if not excel_data and not bourse_data and not news_data:
-        st.warning("""
-        ⚠️ **Aucune donnée chargée**
-        
-        Pour commencer :
-        1. Uploadez un fichier Excel avec les données BDT/FX/MONIA
-        2. Lancez le scraping Bourse de Casablanca
-        3. Collectez les actualités Ilboursa
-        """)
+    with col2:
+        status = "✅ Chargé" if bourse_data.get('status') == 'success' else "⚪ Non chargé"
+        st.metric("Bourse de Casa", status)
+    
+    with col3:
+        st.metric("News", f"{len(news_data)}")
+    
+    if st.session_state.get('last_update'):
+        st.caption(f"Dernière MAJ : {st.session_state.last_update.strftime('%d/%m/%Y %H:%M')}")
+    
+    # Bouton réinitialisation
+    if st.button("🔄 Réinitialiser", type="secondary"):
+        st.session_state.excel_data = {}
+        st.session_state.bourse_data = {}
+        st.session_state.news_data = []
+        st.session_state.last_update = None
+        st.success("Données réinitialisées !")
+        st.rerun()
+
+# =============================================================================
+# APPEL DE LA FONCTION RENDER
+# =============================================================================
+render()
