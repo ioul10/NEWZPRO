@@ -1,10 +1,10 @@
 # =============================================================================
 # NEWZ - Page Export de Rapports
+# Importe les VRAIS graphiques des autres pages
 # =============================================================================
 
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 from datetime import datetime
 from pathlib import Path
 import sys
@@ -14,8 +14,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 try:
     from config.settings import COLORS, APP_INFO
 except ImportError:
-    COLORS = {'primary': '#005696', 'secondary': '#003d6b', 'accent': '#00a8e8', 
-              'success': '#28a745', 'danger': '#dc3545'}
+    COLORS = {'primary': '#005696', 'secondary': '#003d6b', 'accent': '#00a8e8'}
     APP_INFO = {'name': 'Newz', 'version': '2.0.0'}
 
 # -----------------------------------------------------------------------------
@@ -31,6 +30,70 @@ def init_local_session():
 init_local_session()
 
 # -----------------------------------------------------------------------------
+# IMPORT DES FONCTIONS DE GRAPHIQUES DES AUTRES PAGES
+# -----------------------------------------------------------------------------
+
+def get_masi_chart_html():
+    """Récupère le graphique MASI de la page BDC Statut"""
+    try:
+        from pages.bdc_statut import generate_masi_chart_percentage
+        bourse_data = st.session_state.get('bourse_data', {})
+        fig = generate_masi_chart_percentage(bourse_data, days=30)
+        return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    except Exception as e:
+        return f"<!-- Erreur MASI: {str(e)} -->"
+
+def get_msi20_chart_html():
+    """Récupère le graphique MSI20 de la page BDC Statut"""
+    try:
+        from pages.bdc_statut import generate_msi20_chart_percentage
+        bourse_data = st.session_state.get('bourse_data', {})
+        fig = generate_msi20_chart_percentage(bourse_data, days=30)
+        return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    except Exception as e:
+        return f"<!-- Erreur MSI20: {str(e)} -->"
+
+def get_bdt_chart_html():
+    """Récupère la courbe BDT de la page BAM"""
+    try:
+        from pages.bam import generate_bdt_curve_chart
+        excel_data = st.session_state.get('excel_data', {})
+        fig = generate_bdt_curve_chart(excel_data)
+        return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    except Exception as e:
+        return f"<!-- Erreur BDT: {str(e)} -->"
+
+def get_monia_chart_html():
+    """Récupère le graphique MONIA de la page BAM"""
+    try:
+        from pages.bam import generate_monia_chart
+        excel_data = st.session_state.get('excel_data', {})
+        fig = generate_monia_chart(excel_data)
+        return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    except Exception as e:
+        return f"<!-- Erreur MONIA: {str(e)} -->"
+
+def get_eur_chart_html():
+    """Récupère le graphique EUR/MAD de la page BAM"""
+    try:
+        from pages.bam import generate_fx_chart
+        excel_data = st.session_state.get('excel_data', {})
+        fig, _, _ = generate_fx_chart(excel_data, 'EUR/MAD')
+        return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    except Exception as e:
+        return f"<!-- Erreur EUR: {str(e)} -->"
+
+def get_usd_chart_html():
+    """Récupère le graphique USD/MAD de la page BAM"""
+    try:
+        from pages.bam import generate_fx_chart
+        excel_data = st.session_state.get('excel_data', {})
+        fig, _, _ = generate_fx_chart(excel_data, 'USD/MAD')
+        return fig.to_html(full_html=False, include_plotlyjs='cdn')
+    except Exception as e:
+        return f"<!-- Erreur USD: {str(e)} -->"
+
+# -----------------------------------------------------------------------------
 # GÉNÉRATEUR DE RAPPORT
 # -----------------------------------------------------------------------------
 
@@ -40,20 +103,16 @@ def generate_report_html():
     # Récupérer DONNÉES
     bourse_data = st.session_state.get('bourse_data', {})
     excel_data = st.session_state.get('excel_data', {})
-    news_data = st.session_state.get('news_data', [])
     inflation_rate = st.session_state.get('inflation_rate')
     selected = st.session_state.get('export_selected_sections', ['synthese', 'graphiques'])
     
-    # === DONNÉES BDC STATUT ===
+    # Données
     masi_val = bourse_data.get('masi', {}).get('value')
     masi_chg = bourse_data.get('masi', {}).get('change')
     msi20_val = bourse_data.get('msi20', {}).get('value')
     msi20_chg = bourse_data.get('msi20', {}).get('change')
     
-    # === DONNÉES BAM ===
-    taux_directeur = 3.00
-    
-    # MONIA
+    # MONIA dernière valeur
     monia_val = None
     if 'MONIA' in excel_data and not excel_data['MONIA'].empty:
         df = excel_data['MONIA']
@@ -96,96 +155,41 @@ def generate_report_html():
                 usd_mad = float(valid['Mid'].iloc[-1])
                 usd_chg = 0.0
     
-    # === CRÉER GRAPHIQUES ===
-    charts = {}
+    # Récupérer les VRAIS graphiques des autres pages
+    charts = {
+        'masi': get_masi_chart_html() if masi_val else None,
+        'msi20': get_msi20_chart_html() if msi20_val else None,
+        'bdt': get_bdt_chart_html(),
+        'monia': get_monia_chart_html() if monia_val else None,
+        'eur': get_eur_chart_html() if eur_mad else None,
+        'usd': get_usd_chart_html() if usd_mad else None,
+        'inflation': None  # Sera créé localement
+    }
     
-    # MASI
-    if masi_val is not None:
-        try:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=[datetime.now()], y=[masi_val], mode='markers+text',
-                marker=dict(size=15, color='#005696'), text=[f"{masi_val:,.0f}"]))
-            fig.update_layout(title="Indice MASI", height=350, plot_bgcolor='white',
-                xaxis=dict(showgrid=False, showticklabels=False),
-                yaxis=dict(showgrid=True, gridcolor='#eee'))
-            charts['masi'] = fig.to_html(full_html=False, include_plotlyjs='cdn')
-        except:
-            charts['masi'] = None
-    
-    # MSI20
-    if msi20_val is not None:
-        try:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=[datetime.now()], y=[msi20_val], mode='markers+text',
-                marker=dict(size=15, color='#00a8e8'), text=[f"{msi20_val:,.0f}"]))
-            fig.update_layout(title="Indice MSI20", height=350, plot_bgcolor='white',
-                xaxis=dict(showgrid=False, showticklabels=False),
-                yaxis=dict(showgrid=True, gridcolor='#eee'))
-            charts['msi20'] = fig.to_html(full_html=False, include_plotlyjs='cdn')
-        except:
-            charts['msi20'] = None
-    
-    # Taux
-    try:
-        dates = pd.date_range(end=datetime.now(), periods=6, freq='M')
-        rates = [3.00] * 6
-        fig = go.Figure(go.Scatter(x=dates, y=rates, mode='lines+markers'))
-        fig.update_layout(title="Taux Directeur BAM", height=350, plot_bgcolor='white')
-        charts['taux'] = fig.to_html(full_html=False, include_plotlyjs='cdn')
-    except:
-        charts['taux'] = None
-    
-    # MONIA
-    if monia_val is not None:
-        try:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=[datetime.now()], y=[monia_val], mode='markers+text',
-                marker=dict(size=15, color='#00a8e8'), text=[f"{monia_val:.3f}"]))
-            fig.update_layout(title="Indice MONIA", height=350, plot_bgcolor='white',
-                xaxis=dict(showgrid=False, showticklabels=False),
-                yaxis=dict(showgrid=True, gridcolor='#eee'))
-            charts['monia'] = fig.to_html(full_html=False, include_plotlyjs='cdn')
-        except:
-            charts['monia'] = None
-    
-    # EUR/MAD
-    if eur_mad is not None:
-        try:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=[datetime.now()], y=[eur_mad], mode='markers+text',
-                marker=dict(size=15, color='#28a745'), text=[f"{eur_mad:.4f}"]))
-            fig.update_layout(title="EUR/MAD", height=350, plot_bgcolor='white',
-                xaxis=dict(showgrid=False, showticklabels=False),
-                yaxis=dict(showgrid=True, gridcolor='#eee'))
-            charts['eur'] = fig.to_html(full_html=False, include_plotlyjs='cdn')
-        except:
-            charts['eur'] = None
-    
-    # USD/MAD
-    if usd_mad is not None:
-        try:
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=[datetime.now()], y=[usd_mad], mode='markers+text',
-                marker=dict(size=15, color='#28a745'), text=[f"{usd_mad:.4f}"]))
-            fig.update_layout(title="USD/MAD", height=350, plot_bgcolor='white',
-                xaxis=dict(showgrid=False, showticklabels=False),
-                yaxis=dict(showgrid=True, gridcolor='#eee'))
-            charts['usd'] = fig.to_html(full_html=False, include_plotlyjs='cdn')
-        except:
-            charts['usd'] = None
-    
-    # Inflation
+    # Créer jauge inflation localement
     if inflation_rate is not None:
         try:
-            fig = go.Figure(go.Indicator(mode="gauge+number", value=inflation_rate,
-                title={'text': "Inflation"},
-                gauge={'axis': {'range': [-2, 6]}, 'bar': {'color': '#dc3545' if inflation_rate < 2 else '#28a745'}}))
-            fig.update_layout(height=350, paper_bgcolor='white')
+            import plotly.graph_objects as go
+            fig = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=inflation_rate,
+                title={'text': "Inflation (HCP)"},
+                gauge={
+                    'axis': {'range': [-2, 6]},
+                    'bar': {'color': '#dc3545' if inflation_rate < 2 else '#28a745'},
+                    'steps': [
+                        {'range': [-2, 2], 'color': '#ffebee'},
+                        {'range': [2, 3], 'color': '#e8f5e9'},
+                        {'range': [3, 6], 'color': '#ffebee'}
+                    ]
+                }
+            ))
+            fig.update_layout(height=400, paper_bgcolor='white')
             charts['inflation'] = fig.to_html(full_html=False, include_plotlyjs='cdn')
         except:
             charts['inflation'] = None
     
-    # === CONSTRUIRE HTML ===
+    # Construire HTML
     today = datetime.now().strftime('%d/%m/%Y')
     
     html = f"""
@@ -199,16 +203,16 @@ def generate_report_html():
             body {{ font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }}
             .container {{ max-width: 1200px; margin: 0 auto; background: white; padding: 50px; }}
             .header {{ background: linear-gradient(135deg, #005696, #003d6b); color: white; padding: 50px; text-align: center; margin-bottom: 50px; }}
-            .header h1 {{ font-size: 48px; margin-bottom: 15px; }}
-            .header h2 {{ font-size: 24px; margin-bottom: 15px; }}
+            .header h1 {{ font-size: 48px; }}
+            .header h2 {{ font-size: 24px; margin: 15px 0; }}
             .section {{ margin-bottom: 50px; padding: 40px; border-left: 6px solid #005696; background: #fafafa; }}
             .section h2 {{ color: #005696; font-size: 32px; margin-bottom: 30px; }}
-            .kpi-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin: 25px 0; }}
+            .kpi-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 20px; }}
             .kpi-card {{ background: white; padding: 25px; text-align: center; box-shadow: 0 3px 10px rgba(0,0,0,0.1); }}
-            .kpi-card h4 {{ color: #666; font-size: 13px; margin-bottom: 12px; }}
-            .kpi-card .value {{ font-size: 28px; font-weight: bold; color: #005696; margin-bottom: 8px; }}
-            .chart-box {{ margin: 30px 0; background: white; padding: 25px; }}
-            .no-data {{ padding: 30px; background: #fff3cd; text-align: center; }}
+            .kpi-card h4 {{ color: #666; font-size: 12px; margin-bottom: 10px; }}
+            .kpi-card .value {{ font-size: 26px; font-weight: bold; color: #005696; }}
+            .chart-box {{ margin: 30px 0; background: white; padding: 20px; border-radius: 8px; }}
+            .no-data {{ padding: 30px; background: #fff3cd; text-align: center; border-radius: 8px; }}
             .footer {{ margin-top: 60px; padding: 40px; background: linear-gradient(135deg, #005696, #003d6b); color: white; text-align: center; }}
         </style>
     </head>
@@ -225,34 +229,41 @@ def generate_report_html():
     if 'synthese' in selected:
         html += '<div class="section"><h2>📊 Synthèse</h2><div class="kpi-grid">'
         
-        if masi_val is not None:
+        # MASI
+        if masi_val:
             html += f'<div class="kpi-card"><h4>Indice MASI</h4><div class="value">{masi_val:,.0f}</div><div style="color:{"#28a745" if masi_chg and masi_chg >= 0 else "#dc3545"}">{masi_chg:+.2f}%</div></div>'
         else:
             html += '<div class="kpi-card"><h4>Indice MASI</h4><div class="no-data">Non disponible</div></div>'
         
-        if msi20_val is not None:
+        # MSI20
+        if msi20_val:
             html += f'<div class="kpi-card"><h4>Indice MSI20</h4><div class="value">{msi20_val:,.0f}</div><div style="color:{"#28a745" if msi20_chg and msi20_chg >= 0 else "#dc3545"}">{msi20_chg:+.2f}%</div></div>'
         else:
             html += '<div class="kpi-card"><h4>Indice MSI20</h4><div class="no-data">Non disponible</div></div>'
         
-        html += f'<div class="kpi-card"><h4>Taux Directeur</h4><div class="value">{taux_directeur:.2f}%</div></div>'
+        # Taux
+        html += '<div class="kpi-card"><h4>Taux Directeur</h4><div class="value">3.00%</div></div>'
         
-        if monia_val is not None:
+        # MONIA
+        if monia_val:
             html += f'<div class="kpi-card"><h4>Indice MONIA</h4><div class="value">{monia_val:.3f}%</div></div>'
         else:
             html += '<div class="kpi-card"><h4>Indice MONIA</h4><div class="no-data">Non disponible</div></div>'
         
-        if eur_mad is not None:
+        # EUR/MAD
+        if eur_mad:
             html += f'<div class="kpi-card"><h4>EUR/MAD</h4><div class="value">{eur_mad:.4f}</div><div style="color:{"#28a745" if eur_chg and eur_chg >= 0 else "#dc3545"}">{eur_chg:+.2f}%</div></div>'
         else:
             html += '<div class="kpi-card"><h4>EUR/MAD</h4><div class="no-data">Non disponible</div></div>'
         
-        if usd_mad is not None:
+        # USD/MAD
+        if usd_mad:
             html += f'<div class="kpi-card"><h4>USD/MAD</h4><div class="value">{usd_mad:.4f}</div><div style="color:{"#28a745" if usd_chg and usd_chg >= 0 else "#dc3545"}">{usd_chg:+.2f}%</div></div>'
         else:
             html += '<div class="kpi-card"><h4>USD/MAD</h4><div class="no-data">Non disponible</div></div>'
         
-        if inflation_rate is not None:
+        # Inflation
+        if inflation_rate:
             html += f'<div class="kpi-card"><h4>Inflation</h4><div class="value">{inflation_rate:.2f}%</div></div>'
         else:
             html += '<div class="kpi-card"><h4>Inflation</h4><div class="no-data">Non disponible</div></div>'
@@ -264,31 +275,31 @@ def generate_report_html():
         html += '<div class="section"><h2>📈 Graphiques</h2>'
         
         html += '<div class="chart-box">'
-        html += charts.get('masi', '<div class="no-data">MASI non disponible</div>')
+        html += charts.get('masi') or '<div class="no-data">MASI non disponible</div>'
         html += '</div>'
         
         html += '<div class="chart-box">'
-        html += charts.get('msi20', '<div class="no-data">MSI20 non disponible</div>')
+        html += charts.get('msi20') or '<div class="no-data">MSI20 non disponible</div>'
         html += '</div>'
         
         html += '<div class="chart-box">'
-        html += charts.get('taux', '<div class="no-data">Taux non disponible</div>')
+        html += charts.get('bdt') or '<div class="no-data">BDT non disponible</div>'
         html += '</div>'
         
         html += '<div class="chart-box">'
-        html += charts.get('monia', '<div class="no-data">MONIA non disponible</div>')
+        html += charts.get('monia') or '<div class="no-data">MONIA non disponible</div>'
         html += '</div>'
         
         html += '<div class="chart-box">'
-        html += charts.get('eur', '<div class="no-data">EUR/MAD non disponible</div>')
+        html += charts.get('eur') or '<div class="no-data">EUR/MAD non disponible</div>'
         html += '</div>'
         
         html += '<div class="chart-box">'
-        html += charts.get('usd', '<div class="no-data">USD/MAD non disponible</div>')
+        html += charts.get('usd') or '<div class="no-data">USD/MAD non disponible</div>'
         html += '</div>'
         
         html += '<div class="chart-box">'
-        html += charts.get('inflation', '<div class="no-data">Inflation non disponible</div>')
+        html += charts.get('inflation') or '<div class="no-data">Inflation non disponible</div>'
         html += '</div>'
         
         html += '</div>'
@@ -296,7 +307,7 @@ def generate_report_html():
     html += f"""
             <div class="footer">
                 <p><b>CDG Capital - Market Data Team</b></p>
-                <p>{APP_INFO.get('name','NEWZ')} v{APP_INFO.get('version','2.0.0')} | Document confidentiel</p>
+                <p>{APP_INFO.get('name','NEWZ')} v{APP_INFO.get('version','2.0.0')}</p>
                 <p>Généré le : {datetime.now().strftime('%d/%m/%Y à %H:%M:%S')}</p>
             </div>
         </div>
@@ -314,63 +325,33 @@ def render():
     """Fonction principale"""
     
     st.markdown("### 📤 Export de Rapport")
+    st.info("💡 Les graphiques seront identiques à ceux des pages BDC Statut et BAM")
     
-    # DEBUG
-    st.markdown("### 🔍 État des données")
-    
+    # État des données
     bourse_data = st.session_state.get('bourse_data', {})
     excel_data = st.session_state.get('excel_data', {})
     inflation_rate = st.session_state.get('inflation_rate')
     
-    col1, col2, col3, col4 = st.columns(4)
-    
+    col1, col2, col3 = st.columns(3)
     with col1:
-        has_masi = bourse_data.get('masi', {}).get('value') is not None
-        st.metric("MASI", "✅" if has_masi else "❌")
-        if has_masi:
-            st.write(f"Valeur: {bourse_data['masi']['value']:,.0f}")
-    
+        st.metric("Bourse", "✅" if bourse_data.get('masi', {}).get('value') else "❌")
     with col2:
-        has_msi20 = bourse_data.get('msi20', {}).get('value') is not None
-        st.metric("MSI20", "✅" if has_msi20 else "❌")
-        if has_msi20:
-            st.write(f"Valeur: {bourse_data['msi20']['value']:,.0f}")
-    
+        st.metric("Excel", f"✅ {len(excel_data)} feuilles" if excel_data else "❌")
     with col3:
-        has_excel = len(excel_data) > 0
-        st.metric("Excel", f"✅ {len(excel_data)}" if has_excel else "❌")
-        if has_excel:
-            st.write(f"Feuilles: {list(excel_data.keys())}")
-    
-    with col4:
         st.metric("Inflation", "✅" if inflation_rate else "❌")
-        if inflation_rate:
-            st.write(f"{inflation_rate:.2f}%")
-    
-    # Vérifier
-    if not any([bourse_data.get('masi', {}).get('value'), bourse_data.get('msi20', {}).get('value'), len(excel_data), inflation_rate]):
-        st.error("""
-        ⚠️ **AUCUNE DONNÉE !**
-        
-        Collectez d'abord les données :
-        1. **Data Ingestion** → Actualiser Bourse
-        2. **Data Ingestion** → Upload Excel
-        3. **Macronews** → Actualiser Inflation
-        """)
     
     st.markdown("---")
     
-    # Sélections
+    # Sections
     st.markdown("### Sections")
-    sections = {'synthese': '📊 Synthèse', 'graphiques': '📈 Graphiques'}
-    for key, label in sections.items():
-        st.checkbox(label, value=True, key=f"chk_{key}")
+    st.checkbox("📊 Synthèse", value=True, key="chk_synthese")
+    st.checkbox("📈 Graphiques", value=True, key="chk_graphiques")
     
     st.markdown("---")
     
     # Génération
-    if st.button("🚀 Générer", type="primary", use_container_width=True):
-        with st.spinner("Génération..."):
+    if st.button("🚀 Générer le Rapport", type="primary", use_container_width=True):
+        with st.spinner("Génération en cours..."):
             try:
                 html = generate_report_html()
                 st.session_state.report_html = html
