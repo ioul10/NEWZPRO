@@ -52,13 +52,13 @@ def get_masi_chart_html():
                 # Chercher MASI dans les colonnes
                 if 'MASI' in df.columns:
                     dates = df['Date']
-                    values = df['MASI']
+                    values = df['MASI'].values  # Convertir en numpy array
                 else:
                     # Créer un indice composite
                     numeric_cols = df.select_dtypes(include=[np.number]).columns
                     if len(numeric_cols) > 0:
                         dates = df['Date']
-                        values = df[numeric_cols].mean(axis=1)
+                        values = df[numeric_cols].mean(axis=1).values
                     else:
                         raise ValueError("Pas de données numériques")
             else:
@@ -71,7 +71,8 @@ def get_masi_chart_html():
             np.random.seed(42)
             returns = np.random.normal(0.0003, 0.008, size=30)
             values = base_value * (1 + returns).cumprod()
-            values = values * (base_value / values.iloc[-1])
+            # Ajuster pour que la dernière valeur corresponde
+            values = values * (base_value / values[-1])
         
         # Créer le graphique
         fig = go.Figure()
@@ -119,13 +120,13 @@ def get_msi20_chart_html():
                 # Chercher MSI20 dans les colonnes
                 if 'MSI20' in df.columns:
                     dates = df['Date']
-                    values = df['MSI20']
+                    values = df['MSI20'].values  # Convertir en numpy array
                 else:
                     # Créer un indice composite (5 premières actions)
                     numeric_cols = df.select_dtypes(include=[np.number]).columns[:5]
                     if len(numeric_cols) > 0:
                         dates = df['Date']
-                        values = df[numeric_cols].mean(axis=1) * 10
+                        values = (df[numeric_cols].mean(axis=1) * 10).values
                     else:
                         raise ValueError("Pas de données")
             else:
@@ -138,7 +139,8 @@ def get_msi20_chart_html():
             np.random.seed(43)
             returns = np.random.normal(0.0004, 0.009, size=30)
             values = base_value * (1 + returns).cumprod()
-            values = values * (base_value / values.iloc[-1])
+            # Ajuster
+            values = values * (base_value / values[-1])
         
         # Créer le graphique
         fig = go.Figure()
