@@ -42,7 +42,7 @@ init_local_session()
 # -----------------------------------------------------------------------------
 
 def generate_report_html():
-    """Génère le rapport HTML complet"""
+    """Génère le rapport HTML complet avec graphiques"""
     
     bourse_data = st.session_state.get('bourse_data', {})
     excel_data = st.session_state.get('excel_data', {})
@@ -70,12 +70,46 @@ def generate_report_html():
     # Inflation
     inflation = -0.8
     
+    # Générer les graphiques Plotly
+    try:
+        from pages.bdc_statut import generate_masi_chart_real, generate_msi20_chart_real
+        from pages.bam import generate_bdt_curve_chart, generate_monia_chart, generate_fx_chart
+        
+        # MASI
+        fig_masi = generate_masi_chart_real(bourse_data, days=30)
+        masi_html = fig_masi.to_html(full_html=False, include_plotlyjs='cdn')
+        
+        # MSI20
+        fig_msi20 = generate_msi20_chart_real(bourse_data, days=30)
+        msi20_html = fig_msi20.to_html(full_html=False, include_plotlyjs='cdn')
+        
+        # BDT
+        fig_bdt = generate_bdt_curve_chart(excel_data)
+        bdt_html = fig_bdt.to_html(full_html=False, include_plotlyjs='cdn')
+        
+        # MONIA
+        fig_mon = generate_monia_chart(excel_data)
+        mon_html = fig_mon.to_html(full_html=False, include_plotlyjs='cdn')
+        
+        # EUR/MAD
+        fig_eur, _, _ = generate_fx_chart(excel_data, 'EUR/MAD')
+        eur_html = fig_eur.to_html(full_html=False, include_plotlyjs='cdn')
+        
+        # USD/MAD
+        fig_usd, _, _ = generate_fx_chart(excel_data, 'USD/MAD')
+        usd_html = fig_usd.to_html(full_html=False, include_plotlyjs='cdn')
+        
+    except Exception as e:
+        st.warning(f"⚠️ Graphiques non disponibles : {str(e)}")
+        masi_html = msi20_html = bdt_html = mon_html = eur_html = usd_html = "<p>Graphique non disponible</p>"
+    
     html = f"""
     <!DOCTYPE html>
     <html lang="fr">
     <head>
         <meta charset="UTF-8">
         <title>Newz Report - {datetime.now().strftime('%d/%m/%Y')}</title>
+        <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
         <style>
             * {{ margin: 0; padding: 0; box-sizing: border-box; }}
             body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; padding: 20px; }}
@@ -94,6 +128,7 @@ def generate_report_html():
             .kpi-card .change {{ font-size: 14px; padding: 5px 15px; border-radius: 20px; display: inline-block; }}
             .positive {{ color: #28a745; background: #d4edda; }}
             .negative {{ color: #dc3545; background: #f8d7da; }}
+            .chart-container {{ margin: 30px 0; padding: 20px; background: white; border: 2px solid #e0e0e0; border-radius: 10px; }}
             table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
             th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
             th {{ background: #005696; color: white; font-weight: bold; }}
@@ -103,7 +138,7 @@ def generate_report_html():
             .news-item p {{ color: #666; font-size: 14px; }}
             .footer {{ margin-top: 50px; padding: 30px; background: linear-gradient(135deg, #005696 0%, #003d6b 100%); color: white; text-align: center; border-radius: 15px; }}
             .stamp {{ display: inline-block; border: 4px solid #dc3545; color: #dc3545; padding: 15px 40px; font-weight: bold; font-size: 24px; transform: rotate(-3deg); margin-top: 20px; background: white; }}
-            @media print {{ body {{ background: white; padding: 0; }} .container {{ box-shadow: none; padding: 20px; }} .no-print {{ display: none; }} }}
+            @media print {{ body {{ background: white; padding: 0; }} .container {{ box-shadow: none; padding: 20px; }} .no-print {{ display: none; }} .chart-container {{ page-break-inside: avoid; }} }}
         </style>
     </head>
     <body>
@@ -151,38 +186,32 @@ def generate_report_html():
             </div>
         """
     
-    # SECTION 2 : BDC STATUT
+    # SECTION 2 : INDICES BOURSIERS (GRAPHIQUES)
     if 'bdc' in selected:
-        html += """
+        html += f"""
             <div class="section">
-                <h2>📈 BDC Statut - Bourse de Casablanca</h2>
-                <h3>Performance des Indices</h3>
-                <p>La bourse de Casablanca affiche une performance positive cette semaine, portée par les valeurs bancaires et les télécoms.</p>
-                <h3>Top Movers</h3>
-                <table>
-                    <tr><th>Valeur</th><th>Cours</th><th>Variation</th><th>Volume</th></tr>
-                    <tr><td>Attijariwafa Bank</td><td>485.50 MAD</td><td style='color:#28a745'>+3.5%</td><td>125,000</td></tr>
-                    <tr><td>Maroc Telecom</td><td>142.30 MAD</td><td style='color:#28a745'>+2.8%</td><td>98,000</td></tr>
-                    <tr><td>BCP</td><td>112.40 MAD</td><td style='color:#dc3545'>-1.5%</td><td>156,000</td></tr>
-                    <tr><td>Cosumar</td><td>178.20 MAD</td><td style='color:#28a745'>+1.9%</td><td>87,000</td></tr>
-                    <tr><td>LafargeHolcim</td><td>756.00 MAD</td><td style='color:#dc3545'>-0.8%</td><td>65,000</td></tr>
-                </table>
+                <h2>📈 Indices Boursiers</h2>
+                <h3>Évolution du MASI (30 jours)</h3>
+                <div class="chart-container">{masi_html}</div>
+                <h3>Évolution du MSI20 (30 jours)</h3>
+                <div class="chart-container">{msi20_html}</div>
             </div>
         """
     
-    # SECTION 3 : BAM
+    # SECTION 3 : BANK AL-MAGHRIB (GRAPHIQUES)
     if 'bam' in selected:
         html += f"""
             <div class="section">
                 <h2>🏦 Bank Al-Maghrib</h2>
-                <h3>Taux Directeur</h3>
-                <p>Bank Al-Maghrib maintient son taux directeur à <b>3.00%</b>, inchangé depuis la dernière décision du conseil.</p>
-                <h3>Devises</h3>
-                <table>
-                    <tr><th>Devise</th><th>Taux</th><th>Variation</th></tr>
-                    <tr><td>EUR/MAD</td><td>{eur_mad:.4f}</td><td style='color:#28a745'>+0.10%</td></tr>
-                    <tr><td>USD/MAD</td><td>{usd_mad:.4f}</td><td style='color:#dc3545'>-0.15%</td></tr>
-                </table>
+                <h3>Courbe des Taux BDT</h3>
+                <div class="chart-container">{bdt_html}</div>
+                <h3>Indice MONIA</h3>
+                <div class="chart-container">{mon_html}</div>
+                <h3>Taux de Change</h3>
+                <h4>EUR/MAD</h4>
+                <div class="chart-container">{eur_html}</div>
+                <h4>USD/MAD</h4>
+                <div class="chart-container">{usd_html}</div>
             </div>
         """
     
