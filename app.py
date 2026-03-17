@@ -92,8 +92,8 @@ init_session_state()
 
 st.markdown(f"""
 <div class="main-header">
-    <h1>🏦 CDG Capital</h1>
-    <p><b>{APP_INFO['name']}</b> — Market Data Platform v{APP_INFO['version']}</p>
+    <h1>NEWZ</h1>
+    <p>Market Data Platform v{APP_INFO['version']}</p>
 </div>
 """, unsafe_allow_html=True)
 
