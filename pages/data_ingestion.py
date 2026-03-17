@@ -381,6 +381,10 @@ def process_excel_file(uploaded_file):
 # FONCTION PRINCIPALE
 # -----------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
+# FONCTION PRINCIPALE
+# -----------------------------------------------------------------------------
+
 def render():
     """Fonction principale de la page Data Ingestion"""
     
@@ -501,11 +505,169 @@ def render():
                 value=f"{bourse_data.get('masi', {}).get('volume', 0)/1e6:.1f}M"
             )
         
-        st.caption(f"Source : {bourse_data.get('source', 'Yahoo Finance')} | Dernière MAJ : {bourse_data.get('masi', {}).get('timestamp', datetime.now()).strftime('%H:%M:%S')}")
+        # Gestion robuste du timestamp (string ou datetime)
+        masi_timestamp = bourse_data.get('masi', {}).get('timestamp')
+        if isinstance(masi_timestamp, str):
+            # Format ISO depuis le cache JSON
+            try:
+                timestamp_str = datetime.fromisoformat(masi_timestamp).strftime('%H:%M:%S')
+            except:
+                timestamp_str = masi_timestamp[:8] if len(masi_timestamp) >= 8 else "N/A"
+        elif isinstance(masi_timestamp, datetime):
+            timestamp_str = masi_timestamp.strftime('%H:%M:%S')
+        else:
+            timestamp_str = datetime.now().strftime('%H:%M:%S')
+        
+        st.caption(f"Source : {bourse_data.get('source', 'Yahoo Finance')} | Dernière MAJ : {timestamp_str}")
     else:
         st.warning("⚠️ Cliquez sur 'Actualiser' pour récupérer les données")
     
     st.markdown("---")
+    
+    # ---------------------------------------------------------------------
+    # SECTION 3 : NEWS ILBOURSA (VRAI SCRAPPING)
+    # ---------------------------------------------------------------------
+    st.markdown("### 3️⃣ Actualités Financières (Ilboursa)")
+    
+    st.info("""
+    **📰 Source :** www.ilboursa.com
+    
+    **🔄 Mise à jour :** Scraping en temps réel
+    """)
+    
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        st.markdown("""
+        **Catégories disponibles :**
+        - Marché
+        - Entreprises
+        - Économie
+        - Monétaire
+        - Analyse
+        """)
+    
+    with col2:
+        if st.button("📰 Collecter", use_container_width=True, type="primary"):
+            with st.spinner("Récupération des actualités..."):
+                news = scrape_ilboursa_news(limit=10)
+                if news:
+                    st.session_state.news_data = news
+                    st.session_state.last_update = datetime.now()
+                    st.success(f"✅ {len(news)} actualités collectées !")
+                    st.rerun()
+    
+    # Affichage des news
+    news_data = st.session_state.get('news_data', [])
+    if news_data:
+        st.markdown("#### 📰 Dernières Actualités")
+        
+        for i, news in enumerate(news_data[:10]):
+            with st.expander(f"📄 {news['title']}", expanded=(i < 3)):
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    st.write(f"**Source :** {news['source']}")
+                    st.write(f"**Catégorie :** {news['category']}")
+                    st.write(f"**Date :** {news['timestamp'].strftime('%d/%m/%Y %H:%M')}")
+                    st.markdown("---")
+                    st.write(news['summary'])
+                with col2:
+                    st.markdown(f"[🔗 Lire →]({news['url']})")
+    else:
+        st.warning("⚠️ Cliquez sur 'Collecter' pour récupérer les actualités")
+    
+    st.markdown("---")
+    
+    # ---------------------------------------------------------------------
+    # SECTION 4 : HISTORIQUE DES ACTIONS (POUR CORRÉLATIONS)
+    # ---------------------------------------------------------------------
+    st.markdown("### 4️⃣ Historique des Actions (MSI20)")
+    
+    st.info("""
+    **📊 Récupération depuis Yahoo Finance**
+    
+    Les tickers marocains sur Yahoo Finance se terminent par `.CA`
+    Exemple : ATT.CA, IAM.CA, BCP.CA
+    """)
+    
+    # Liste des principaux tickers
+    tickers_map = {
+        'Attijariwafa Bank': 'ATT.CA',
+        'Maroc Telecom': 'IAM.CA',
+        'BCP': 'BCP.CA',
+        'BMCE Bank': 'BMCE.CA',
+        'Cosumar': 'CSR.CA',
+        'LafargeHolcim': 'LHM.CA',
+        'CIH Bank': 'CIH.CA',
+        'Sonasid': 'SID.CA',
+        'Managem': 'MNG.CA',
+        'Crédit du Maroc': 'CDM.CA'
+    }
+    
+    selected_actions = st.multiselect(
+        "Sélectionnez les actions :",
+        options=list(tickers_map.keys()),
+        default=list(tickers_map.keys())[:5]
+    )
+    
+    if st.button("📥 Récupérer l'historique", type="primary"):
+        if selected_actions:
+            tickers = [tickers_map[action] for action in selected_actions]
+            with st.spinner(f"Récupération de {len(tickers)} actions..."):
+                df_actions = scrape_actions_historical(tickers, days=90)
+                if df_actions is not None and not df_actions.empty:
+                    st.session_state.actions_data = df_actions.reset_index()
+                    st.session_state.last_update = datetime.now()
+                    st.success(f"✅ {len(df_actions)} lignes récupérées pour {len(tickers)} actions !")
+                    st.rerun()
+                else:
+                    st.error("❌ Aucune donnée récupérée")
+        else:
+            st.warning("⚠️ Sélectionnez au moins une action")
+    
+    # Aperçu des données actions
+    if st.session_state.get('actions_data') is not None:
+        st.markdown("#### 📊 Aperçu des données actions")
+        st.dataframe(st.session_state.actions_data.head(10), use_container_width=True)
+        st.caption(f"Total : {len(st.session_state.actions_data)} lignes")
+    
+    st.markdown("---")
+    
+    # ---------------------------------------------------------------------
+    # SECTION 5 : RÉSUMÉ
+    # ---------------------------------------------------------------------
+    st.markdown("### 📊 Résumé des Données")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        sheets = len([s for s in excel_data.values() if not s.empty]) if excel_data else 0
+        st.metric("Feuilles Excel", f"{sheets}/6")
+    
+    with col2:
+        status = "✅ Chargé" if bourse_data.get('status') == 'success' else "⚪ Non chargé"
+        st.metric("Bourse de Casa", status)
+    
+    with col3:
+        st.metric("News", f"{len(news_data)}")
+    
+    with col4:
+        actions_status = "✅ Chargé" if st.session_state.get('actions_data') is not None else "⚪ Non chargé"
+        st.metric("Actions", actions_status)
+    
+    if st.session_state.get('last_update'):
+        st.caption(f"Dernière mise à jour : {st.session_state.last_update.strftime('%d/%m/%Y %H:%M:%S')}")
+    
+    # Bouton réinitialisation
+    st.markdown("---")
+    if st.button("🔄 Réinitialiser toutes les données", type="secondary"):
+        st.session_state.excel_data = {}
+        st.session_state.bourse_data = {}
+        st.session_state.news_data = []
+        st.session_state.actions_data = None
+        st.session_state.last_update = None
+        st.success("✅ Toutes les données ont été réinitialisées !")
+        st.rerun()markdown("---")
     
     # ---------------------------------------------------------------------
     # SECTION 3 : NEWS ILBOURSA (VRAI SCRAPPING)
