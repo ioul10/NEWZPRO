@@ -204,7 +204,7 @@ def generate_report_html():
         """
     
     # SECTION 5 : NEWS
-    if 'news' in selected and news_
+    if 'news' in selected and news_data:
         html += """
             <div class="section">
                 <h2>📰 Actualités Marquantes</h2>
