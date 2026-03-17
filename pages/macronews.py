@@ -120,6 +120,10 @@ def scrape_inflation_history():
 def create_inflation_gauge(current_rate):
     """Crée une jauge d'inflation"""
     
+    # Si current_rate est None, utiliser une valeur par défaut
+    if current_rate is None:
+        current_rate = -0.8
+    
     target_min = 2.0
     target_max = 3.0
     
@@ -165,7 +169,6 @@ def create_inflation_gauge(current_rate):
     )
     
     return fig, status
-
 def create_inflation_history_chart(df_history):
     """Crée le graphique de l'historique"""
     
