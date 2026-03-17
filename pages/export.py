@@ -82,7 +82,13 @@ def generate_report_html():
                 df_valid['quote_date'] = pd.to_datetime(df_valid['quote_date'])
                 df_valid = df_valid.sort_values('quote_date')
                 eur_mad = float(df_valid['Mid'].iloc[-1])  # DERNIÈRE VALEUR
-    
+      # Générer les graphiques AUTONOMES (pas d'import)
+    masi_html = create_masi_chart_html(bourse_data)
+    msi20_html = create_msi20_chart_html(bourse_data)
+    bdt_html = create_bdt_chart_html(excel_data)
+    mon_html = create_monia_chart_html(excel_data)
+    eur_html = create_eur_mad_chart_html(excel_data)
+    usd_html = create_usd_mad_chart_html(excel_data)
     
     # Inflation
     inflation = -0.8
