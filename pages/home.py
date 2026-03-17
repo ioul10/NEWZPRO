@@ -218,7 +218,7 @@ def render():
     with col1:
         st.markdown(f"""
         **📋 À Propos**
-        - **Version :** {APP_INFO.get('version', 'N/A')}
+        - **Version :** 0.1.0
         - **Développeur :** OULMADANI Ilyas & ATANANE Oussama
         - **Confidentialité :** Usage interne uniquement
         
