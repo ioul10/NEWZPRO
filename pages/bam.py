@@ -85,7 +85,7 @@ def generate_bdt_curve_chart(excel_data=None):
     return fig
 
 def generate_monia_chart(excel_data=None):
-    """Génère le graphique MONIA"""
+    """Génère le graphique MONIA avec échelle zoomée"""
     
     if excel_data is None or 'MONIA' not in excel_data or excel_data['MONIA'].empty:
         dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
@@ -95,20 +95,39 @@ def generate_monia_chart(excel_data=None):
         if 'quote_date' in df.columns and 'rate' in df.columns:
             dates = pd.to_datetime(df['quote_date'])
             rates = df['rate']
+            # Filtrer les valeurs nulles
+            mask = rates.notna()
+            dates = dates[mask]
+            rates = rates[mask]
         else:
             dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
             rates = [3.00 + np.random.uniform(-0.02, 0.02) for _ in range(30)]
+    
+    if len(rates) == 0:
+        dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
+        rates = [3.00 + np.random.uniform(-0.02, 0.02) for _ in range(30)]
+    
+    rates_series = pd.Series(rates) if not isinstance(rates, pd.Series) else rates
+    
+    # Calculer la plage pour zoomer
+    min_val = rates_series.min()
+    max_val = rates_series.max()
+    range_val = max_val - min_val
+    padding = max(range_val * 0.3, 0.005)  # Au moins 0.005 de marge
+    y_min = min_val - padding
+    y_max = max_val + padding
     
     fig = go.Figure()
     
     fig.add_trace(go.Scatter(
         x=dates,
-        y=rates,
+        y=rates_series,
         mode='lines+markers',
         name='MONIA',
         line=dict(color=COLORS['accent'], width=2.5),
         fill='tozeroy',
-        fillcolor=f'rgba(0, 168, 232, 0.15)'
+        fillcolor=f'rgba(0, 168, 232, 0.15)',
+        marker=dict(size=4)
     ))
     
     fig.update_layout(
@@ -120,30 +139,64 @@ def generate_monia_chart(excel_data=None):
         paper_bgcolor='white',
         height=420,
         margin=dict(l=60, r=30, t=50, b=40),
-        yaxis=dict(tickformat='.3f', gridcolor='#eee'),
+        yaxis=dict(
+            tickformat='.3f',
+            range=[y_min, y_max],  # AXE Y ZOOMÉ
+            gridcolor='#eee'
+        ),
         xaxis=dict(gridcolor='#eee')
     )
     
     return fig
-
 def generate_fx_chart(excel_data=None, pair='EUR/MAD'):
-    """Génère le graphique EUR/MAD ou USD/MAD"""
+    """Génère le graphique EUR/MAD ou USD/MAD avec échelle zoomée"""
     
     sheet_name = 'EUR_MAD' if 'EUR' in pair else 'USD_MAD'
     
     if excel_data is None or sheet_name not in excel_data or excel_data[sheet_name].empty:
+        # Données simulées réalistes
         dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
         base = 10.75 if 'EUR' in pair else 9.85
-        rates = base + np.random.uniform(-0.05, 0.05, size=30).cumsum()
+        # Générer des variations réalistes autour du taux de base
+        np.random.seed(42 if 'EUR' in pair else 43)
+        changes = np.random.uniform(-0.02, 0.02, size=30).cumsum()
+        rates = base + changes
     else:
         df = excel_data[sheet_name]
         if 'quote_date' in df.columns and 'Mid' in df.columns:
             dates = pd.to_datetime(df['quote_date'])
             rates = df['Mid']
+            # Filtrer les valeurs nulles ou 0
+            mask = (rates.notna()) & (rates > 0)
+            dates = dates[mask]
+            rates = rates[mask]
         else:
             dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
             base = 10.75 if 'EUR' in pair else 9.85
-            rates = base + np.random.uniform(-0.05, 0.05, size=30).cumsum()
+            np.random.seed(42 if 'EUR' in pair else 43)
+            changes = np.random.uniform(-0.02, 0.02, size=30).cumsum()
+            rates = base + changes
+    
+    # Vérifier qu'on a des données valides
+    if len(rates) == 0 or rates.isna().all():
+        # Fallback
+        dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
+        base = 10.75 if 'EUR' in pair else 9.85
+        rates = pd.Series([base + np.random.uniform(-0.02, 0.02) for _ in range(30)])
+    
+    # Calculer la plage pour zoomer l'axe Y
+    min_val = rates.min()
+    max_val = rates.max()
+    range_val = max_val - min_val
+    
+    # Ajouter une marge de 20% pour voir les mouvements
+    padding = max(range_val * 0.2, 0.01)  # Au moins 0.01 de marge
+    y_min = min_val - padding
+    y_max = max_val + padding
+    
+    # Valeurs actuelles et précédentes
+    current_rate = rates.iloc[-1] if hasattr(rates, 'iloc') else rates[-1]
+    prev_rate = rates.iloc[0] if hasattr(rates, 'iloc') else rates[0]
     
     fig = go.Figure()
     
@@ -154,7 +207,8 @@ def generate_fx_chart(excel_data=None, pair='EUR/MAD'):
         name=pair,
         line=dict(color=COLORS['success'], width=2.5),
         fill='tozeroy',
-        fillcolor=f'rgba(40, 167, 69, 0.15)'
+        fillcolor=f'rgba(40, 167, 69, 0.15)',
+        marker=dict(size=4)
     ))
     
     fig.update_layout(
@@ -166,12 +220,15 @@ def generate_fx_chart(excel_data=None, pair='EUR/MAD'):
         paper_bgcolor='white',
         height=420,
         margin=dict(l=60, r=30, t=50, b=40),
-        yaxis=dict(tickformat='.4f', gridcolor='#eee'),
+        yaxis=dict(
+            tickformat='.4f',
+            range=[y_min, y_max],  # AXE Y ZOOMÉ
+            gridcolor='#eee'
+        ),
         xaxis=dict(gridcolor='#eee')
     )
     
-    return fig, rates.iloc[-1] if hasattr(rates, 'iloc') else rates[-1], rates.iloc[0] if hasattr(rates, 'iloc') else rates[0]
-
+    return fig, current_rate, prev_rate
 # -----------------------------------------------------------------------------
 # FONCTION PRINCIPALE
 # -----------------------------------------------------------------------------
