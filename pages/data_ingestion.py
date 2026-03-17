@@ -291,7 +291,7 @@ def process_excel_file(uploaded_file):
         expected_sheets = ['Courbe MAD', 'Courbe_EUR', 'MONIA', 'MADBDT_52W', 'USD_MAD', 'EUR_MAD']
         
         for sheet in expected_sheets:
-            if sheet in excel_
+            if sheet in excel_data:
                 df = excel_data[sheet].dropna(how='all')
                 processed[sheet] = df
             else:
@@ -467,7 +467,7 @@ def render():
     
     # Affichage des news
     news_data = st.session_state.get('news_data', [])
-    if news_
+    if news_data:
         st.markdown("#### 📰 Dernières Actualités")
         
         for i, news in enumerate(news_data[:10]):
