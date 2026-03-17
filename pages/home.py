@@ -27,7 +27,7 @@ except ImportError:
         'danger': '#dc3545',
         'light': '#f8f9fa'
     }
-    APP_INFO = {'name': 'Newz', 'version': '2.0.0', 'author': 'CDG Capital'}
+    APP_INFO = {'name': 'Newz', 'version': '0.1.0', 'author': 'OULMADANI Ilyas'}
     MSI20_COMPOSITION = []
 
 # -----------------------------------------------------------------------------
@@ -219,7 +219,7 @@ def render():
         st.markdown(f"""
         **📋 À Propos**
         - **Version :** {APP_INFO.get('version', 'N/A')}
-        - **Développeur :** {APP_INFO.get('author', 'CDG Capital')}
+        - **Développeur :** OULMADANI Ilyas & ATANANE Oussama
         - **Confidentialité :** Usage interne uniquement
         
         **🕐 Horaires Bourse**
