@@ -501,7 +501,20 @@ def render():
                 value=f"{bourse_data.get('masi', {}).get('volume', 0)/1e6:.1f}M"
             )
         
-        st.caption(f"Source : {bourse_data.get('source', 'Yahoo Finance')} | Dernière MAJ : {bourse_data.get('masi', {}).get('timestamp', datetime.now()).strftime('%H:%M:%S')}")
+        # Gestion du timestamp (peut être string ISO ou datetime)
+        masi_ts = bourse_data.get('masi', {}).get('timestamp')
+        if isinstance(masi_ts, str):
+             # String ISO format → extraire l'heure
+             try:
+                ts_display = datetime.fromisoformat(masi_ts).strftime('%H:%M:%S')
+             except:
+                ts_display = masi_ts[:8] if len(masi_ts) >= 8 else "N/A"
+        elif isinstance(masi_ts, datetime):
+             ts_display = masi_ts.strftime('%H:%M:%S')
+        else:
+             ts_display = datetime.now().strftime('%H:%M:%S')
+
+        st.caption(f"Source : {bourse_data.get('source', 'Yahoo Finance')} | Dernière MAJ : {ts_display}")
     else:
         st.warning("⚠️ Cliquez sur 'Actualiser' pour récupérer les données")
     
