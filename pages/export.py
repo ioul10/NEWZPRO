@@ -55,17 +55,34 @@ def generate_report_html():
     msi20_val = bourse_data.get('msi20', {}).get('value', 1580)
     msi20_chg = bourse_data.get('msi20', {}).get('change', 1.20)
     
-    # USD/MAD depuis Excel
+# USD/MAD - PRENDRE LA DERNIÈRE VALEUR (la plus récente)
     usd_mad = 9.85
     if 'USD_MAD' in excel_data and not excel_data['USD_MAD'].empty:
-        if 'Mid' in excel_data['USD_MAD'].columns:
-            usd_mad = float(excel_data['USD_MAD']['Mid'].iloc[-1])
+        df_usd = excel_data['USD_MAD']
+        if 'quote_date' in df_usd.columns and 'Mid' in df_usd.columns:
+            # Filtrer les valeurs valides
+            df_valid = df_usd.dropna(subset=['quote_date', 'Mid'])
+            df_valid = df_valid[df_valid['Mid'] > 0]
+            if not df_valid.empty:
+                # Trier par date et prendre la dernière
+                df_valid['quote_date'] = pd.to_datetime(df_valid['quote_date'])
+                df_valid = df_valid.sort_values('quote_date')
+                usd_mad = float(df_valid['Mid'].iloc[-1])  # DERNIÈRE VALEUR
     
-    # EUR/MAD depuis Excel
+    # EUR/MAD - PRENDRE LA DERNIÈRE VALEUR (la plus récente)
     eur_mad = 10.75
     if 'EUR_MAD' in excel_data and not excel_data['EUR_MAD'].empty:
-        if 'Mid' in excel_data['EUR_MAD'].columns:
-            eur_mad = float(excel_data['EUR_MAD']['Mid'].iloc[-1])
+        df_eur = excel_data['EUR_MAD']
+        if 'quote_date' in df_eur.columns and 'Mid' in df_eur.columns:
+            # Filtrer les valeurs valides
+            df_valid = df_eur.dropna(subset=['quote_date', 'Mid'])
+            df_valid = df_valid[df_valid['Mid'] > 0]
+            if not df_valid.empty:
+                # Trier par date et prendre la dernière
+                df_valid['quote_date'] = pd.to_datetime(df_valid['quote_date'])
+                df_valid = df_valid.sort_values('quote_date')
+                eur_mad = float(df_valid['Mid'].iloc[-1])  # DERNIÈRE VALEUR
+    
     
     # Inflation
     inflation = -0.8
