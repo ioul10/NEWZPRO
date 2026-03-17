@@ -126,50 +126,16 @@ st.markdown(f"""
 
 # Définir les pages de l'application
 pages = [
-    st.Page(
-        "pages/home.py",
-        title="Accueil",
-        icon="🏠",
-        url_path="home"
-    ),
-    st.Page(
-        "pages/data_ingestion.py",
-        title="Data Ingestion",
-        icon="📥",
-        url_path="data_ingestion"
-    ),
-    st.Page(
-        "pages/bdc_statut.py",
-        title="BDC Statut",
-        icon="📊",
-        url_path="bdc_statut"
-    ),
-    st.Page(
-        "pages/bam.py",
-        title="BAM",
-        icon="🏦",
-        url_path="bam"
-    ),
-    st.Page(
-        "pages/macronews.py",
-        title="Macronews",
-        icon="📰",
-        url_path="macronews"
-    ),
-    st.Page(
-        "pages/export.py",
-        title="Export",
-        icon="📤",
-        url_path="export"
-    ),
+    st.Page("pages/home.py", title="Accueil", icon="🏠"),
+    st.Page("pages/data_ingestion.py", title="Data Ingestion", icon="📥"),
+    st.Page("pages/bdc_statut.py", title="BDC Statut", icon="📊"),
+    st.Page("pages/bam.py", title="BAM", icon="🏦"),
+    st.Page("pages/macronews.py", title="Macronews", icon="📰"),
+    st.Page("pages/export.py", title="Export", icon="📤"),
 ]
 
-# Créer la navigation
-pg = st.navigation(
-    pages,
-    position="sidebar",
-    title="Navigation"
-)
+# Créer la navigation (affichage automatique dans la sidebar)
+pg = st.navigation(pages)
 
 # Exécuter la page sélectionnée
 pg.run()
