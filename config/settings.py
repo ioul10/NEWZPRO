@@ -152,10 +152,10 @@ EXPORT_CONFIG = {
 
 APP_INFO = {
     'name': 'Newz',
-    'version': '2.0.0',
+    'version': '0.1.0',
     'description': 'Market Data Platform for CDG Capital',
-    'author': 'CDG Capital - Market Data Team',
-    'copyright': '© 2025 CDG Capital',
+    'author': 'OULMADANI Ilyas',
+    'copyright': '© 2026 CDG Capital',
     'confidentiality': 'Usage interne uniquement'
 }
 
