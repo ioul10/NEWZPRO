@@ -429,17 +429,50 @@ def render():
     st.markdown(f"""
     <div style="background:white;padding:25px;border-radius:10px;margin-bottom:25px;">
         <h2 style="color:{COLORS['primary']};margin:0;">📤 Export de Rapport</h2>
-        <p style="margin:10px 0 0 0;color:#666;">Générez un rapport professionnel basé sur les données collectées</p>
     </div>
     """, unsafe_allow_html=True)
     
-    st.info("""
-    💡 **Important :** 
-    - Ce rapport utilise **UNIQUEMENT** les données collectées dans les autres pages
-    - Allez dans **Data Ingestion** pour actualiser MASI, MSI20, et les données Excel (BDT, MONIA, FX)
-    - Allez dans **Macronews** pour actualiser l'inflation HCP
-    """)
+    # === DEBUG: AFFICHER TOUTES LES DONNÉES ===
+    st.markdown("### 🔍 Debug - Données disponibles")
     
+    with st.expander("📊 Voir toutes les données en session", expanded=True):
+        st.write("**Bourse Data:**", st.session_state.get('bourse_data', {}))
+        st.write("**Excel Data keys:**", list(st.session_state.get('excel_data', {}).keys()))
+        st.write("**Inflation:**", st.session_state.get('inflation_rate'))
+        st.write("**News count:**", len(st.session_state.get('news_data', [])))
+    
+    # Vérifier si on a des données
+    bourse_data = st.session_state.get('bourse_data', {})
+    excel_data = st.session_state.get('excel_data', {})
+    inflation_rate = st.session_state.get('inflation_rate')
+    
+    has_masi = bourse_data.get('masi', {}).get('value') is not None
+    has_msi20 = bourse_data.get('msi20', {}).get('value') is not None
+    has_excel = len(excel_data) > 0
+    has_inflation = inflation_rate is not None
+    
+    col1, col2, col3, col4 = st.columns(4)
+    with col1: st.metric("MASI", "✅" if has_masi else "❌")
+    with col2: st.metric("MSI20", "✅" if has_msi20 else "❌")
+    with col3: st.metric("Excel", f"✅ {len(excel_data)}" if has_excel else "❌")
+    with col4: st.metric("Inflation", "✅" if has_inflation else "❌")
+    
+    if not has_masi and not has_msi20 and not has_excel and not has_inflation:
+        st.error("""
+        ⚠️ **AUCUNE DONNÉE DISPONIBLE !**
+        
+        Vous devez d'abord collecter les données :
+        1. **Data Ingestion** → Cliquez "🔄 Actualiser" pour MASI/MSI20
+        2. **Data Ingestion** → Uploadez un fichier Excel
+        3. **Macronews** → Cliquez "🔄 Actualiser Inflation"
+        4. **Revenez ici** et générez le rapport
+        """)
+        
+        st.info("💡 **Astuce :** Les données sont stockées dans session_state. Si vous rafraîchissez la page, elles sont perdues. Collectez-les à nouveau.")
+    
+    st.markdown("---")
+    
+    # === SÉLECTION DES SECTIONS ===
     st.markdown("### Sections du rapport")
     
     sections = {
@@ -452,33 +485,36 @@ def render():
     
     st.markdown("---")
     
+    # === GÉNÉRATION ===
     if st.button("🚀 Générer le Rapport", type="primary", use_container_width=True):
         with st.spinner("Génération en cours..."):
             try:
                 st.session_state.report_html = generate_report_html()
                 st.success("✅ Rapport généré avec succès")
+                
+                # Afficher un aperçu
+                st.markdown("### Aperçu du rapport généré")
+                st.components.v1.html(st.session_state.report_html, height=600, scrolling=True)
+                
             except Exception as e:
                 st.error(f"❌ Erreur: {str(e)}")
-                st.exception(e)
+                st.exception(e)  # Affiche le traceback complet
     
+    # === TÉLÉCHARGEMENT ===
     if st.session_state.report_html:
         st.markdown("---")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.download_button(
-                label="📥 Télécharger HTML",
-                data=st.session_state.report_html,
-                file_name=f"NEWZ_Report_{datetime.now().strftime('%Y%m%d')}.html",
-                mime="text/html",
-                use_container_width=True
-            )
-        
-        with col2:
-            if st.button("👁️ Aperçu", use_container_width=True):
-                st.components.v1.html(st.session_state.report_html, height=800, scrolling=True)
+        st.download_button(
+            label="📥 Télécharger HTML",
+            data=st.session_state.report_html,
+            file_name=f"NEWZ_Report_{datetime.now().strftime('%Y%m%d')}.html",
+            mime="text/html",
+            use_container_width=True
+        )
 
 # =============================================================================
+# APPEL
+# =============================================================================
+render()
 # APPEL
 # =============================================================================
 render()
