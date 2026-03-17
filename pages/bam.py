@@ -184,9 +184,23 @@ def generate_fx_chart(excel_data=None, pair='EUR/MAD'):
         base = 10.75 if 'EUR' in pair else 9.85
         rates = pd.Series([base + np.random.uniform(-0.02, 0.02) for _ in range(30)])
     
+    # Convertir en Series si nécessaire
+    if not isinstance(rates, pd.Series):
+        rates = pd.Series(rates)
+    
+    # CRÉER UN DATAFRAME AVEC LES DATES POUR TRIER
+    df_rates = pd.DataFrame({'date': dates, 'rate': rates.values})
+    # Trier par date (du plus ancien au plus récent)
+    df_rates = df_rates.sort_values('date').reset_index(drop=True)
+    
+    # DERNIÈRE VALEUR (la plus récente)
+    current_rate = df_rates['rate'].iloc[-1]
+    # PREMIÈRE VALEUR (la plus ancienne) pour calculer la variation
+    prev_rate = df_rates['rate'].iloc[0]
+    
     # Calculer la plage pour zoomer l'axe Y
-    min_val = rates.min()
-    max_val = rates.max()
+    min_val = df_rates['rate'].min()
+    max_val = df_rates['rate'].max()
     range_val = max_val - min_val
     
     # Ajouter une marge de 20% pour voir les mouvements
@@ -194,15 +208,11 @@ def generate_fx_chart(excel_data=None, pair='EUR/MAD'):
     y_min = min_val - padding
     y_max = max_val + padding
     
-    # Valeurs actuelles et précédentes
-    current_rate = rates.iloc[-1] if hasattr(rates, 'iloc') else rates[-1]
-    prev_rate = rates.iloc[0] if hasattr(rates, 'iloc') else rates[0]
-    
     fig = go.Figure()
     
     fig.add_trace(go.Scatter(
-        x=dates,
-        y=rates,
+        x=df_rates['date'],
+        y=df_rates['rate'],
         mode='lines+markers',
         name=pair,
         line=dict(color=COLORS['success'], width=2.5),
@@ -228,7 +238,8 @@ def generate_fx_chart(excel_data=None, pair='EUR/MAD'):
         xaxis=dict(gridcolor='#eee')
     )
     
-    return fig, current_rate, prev_rate
+    # Retourner le graphique, la valeur actuelle (dernière) et la précédente (première)
+    return fig, current_rate, prev_rate 
 # -----------------------------------------------------------------------------
 # FONCTION PRINCIPALE
 # -----------------------------------------------------------------------------
