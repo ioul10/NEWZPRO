@@ -259,7 +259,10 @@ def render():
     
     with col2:
         st.markdown("#### 📊 Indicateurs")
-        st.metric("Inflation Actuelle", f"{current_inflation:.2f}%", status)
+        if current_inflation is not None:
+            st.metric("Inflation Actuelle", f"{current_inflation:.2f}%", status)
+        else:
+            st.metric("Inflation Actuelle", "N/A", "Données indisponibles")
         st.metric("Cible BAM", "2-3%", "✓")
         st.metric("Dernière MAJ", datetime.now().strftime('%d/%m/%Y'))
         
