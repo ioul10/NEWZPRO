@@ -434,7 +434,7 @@ def render():
     
     st.markdown("---")
     
-    # ---------------------------------------------------------------------
+       # ---------------------------------------------------------------------
     # SECTION 4 : TOP MOVERS (INVESTING.COM)
     # ---------------------------------------------------------------------
     st.markdown("### 🏆 Top Movers (Investing.com)")
@@ -450,7 +450,7 @@ def render():
             st.rerun()
     
     # Charger les Top Movers
-    if not st.session_state.top_movers:
+    if st.session_state.top_movers is None or st.session_state.top_movers.empty:
         with st.spinner("Chargement des Top Movers..."):
             st.session_state.top_movers = scrape_top_movers_investing()
     
