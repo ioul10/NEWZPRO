@@ -240,7 +240,8 @@ def render():
         - Vérifiez les logs d'erreur
         - Contactez l'équipe Market Data
         """)
-
+# Appel de la fonction render
+render()
 # =============================================================================
 # NOTE IMPORTANTE :
 # Avec st.navigation(), cette fonction render() est appelée automatiquement.
