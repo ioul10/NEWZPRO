@@ -28,6 +28,58 @@ except ImportError:
     }
     MSI20_COMPOSITION = []
 
+
+# -----------------------------------------------------------------------------
+# FONCTIONS UTILITAIRES
+# -----------------------------------------------------------------------------
+
+def get_market_status():
+    """
+    Récupère le statut actuel du marché (ouvert/fermé)
+    Returns: dict avec status, message, next_open
+    """
+    import pytz
+    
+    now = datetime.now(pytz.timezone('Africa/Casablanca'))
+    current_time = now.time()
+    current_day = now.strftime('%A')
+    
+    # Horaires de la bourse
+    market_open = datetime.strptime('09:00', '%H:%M').time()
+    market_close = datetime.strptime('15:30', '%H:%M').time()
+    
+    # Jours ouvrés
+    working_days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    
+    is_open = False
+    status_text = ""
+    next_open = None
+    
+    if current_day in working_days:
+        if market_open <= current_time <= market_close:
+            is_open = True
+            status_text = "🟢 Marché Ouvert"
+        elif current_time < market_open:
+            status_text = f"🔴 Marché Fermé (Ouvre à {market_open.strftime('%H:%M')})"
+            next_open = now.replace(hour=market_open.hour, minute=market_open.minute)
+        else:
+            status_text = f"🔴 Marché Fermé (Fermé à {market_close.strftime('%H:%M')})"
+            next_open = (now + timedelta(days=1)).replace(hour=market_open.hour, minute=market_open.minute)
+    else:
+        status_text = "🔴 Marché Fermé (Week-end)"
+        # Trouver le prochain lundi
+        days_until_monday = (7 - now.weekday()) % 7 or 7
+        next_open = (now + timedelta(days=days_until_monday)).replace(hour=market_open.hour, minute=market_open.minute)
+    
+    return {
+        'is_open': is_open,
+        'status_text': status_text,
+        'current_time': now.strftime('%H:%M:%S'),
+        'next_open': next_open
+    }
+
+
+
 # -----------------------------------------------------------------------------
 # INITIALISATION LOCALE
 # -----------------------------------------------------------------------------
@@ -43,19 +95,15 @@ def init_local_session():
 
 init_local_session()
 
-# -----------------------------------------------------------------------------
-# FONCTIONS DE GÉNÉRATION DE GRAPHIQUES
-# -----------------------------------------------------------------------------
-
-def generate_masi_chart(bourse_data=None):
+def generate_masi_chart(bourse_data=None, days=10):
     """Génère le graphique d'évolution du MASI"""
     # Données simulées pour l'exemple (à remplacer par vraies données)
-    dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
+    dates = pd.date_range(end=datetime.now(), periods=days, freq='D')
     base_value = 12450 if not bourse_data else bourse_data.get('masi', {}).get('value', 12450)
     
-    # Génération de données réalistes
+    # Génération de données réalistes avec plus de volatilité pour les courtes périodes
     np.random.seed(42)
-    returns = np.random.normal(0.0003, 0.01, size=30)
+    returns = np.random.normal(0.0003, 0.01, size=days)
     values = base_value * (1 + returns).cumprod()
     
     fig = go.Figure()
@@ -70,25 +118,29 @@ def generate_masi_chart(bourse_data=None):
     ))
     
     fig.update_layout(
-        title="Évolution du MASI (30 jours)",
+        title=f"Évolution du MASI ({days} jours)",
         xaxis_title="Date",
         yaxis_title="Valeur",
         hovermode='x unified',
         plot_bgcolor='white',
         paper_bgcolor='white',
         height=400,
-        margin=dict(l=50, r=30, t=50, b=30)
+        margin=dict(l=50, r=30, t=50, b=30),
+        xaxis=dict(
+            rangeslider=dict(visible=True),  # Slider pour zoomer
+            type="date"
+        )
     )
     
     return fig
 
-def generate_msi20_chart(bourse_data=None):
+def generate_msi20_chart(bourse_data=None, days=10):
     """Génère le graphique d'évolution du MSI20"""
-    dates = pd.date_range(end=datetime.now(), periods=30, freq='D')
+    dates = pd.date_range(end=datetime.now(), periods=days, freq='D')
     base_value = 1580 if not bourse_data else bourse_data.get('msi20', {}).get('value', 1580)
     
     np.random.seed(43)
-    returns = np.random.normal(0.0004, 0.012, size=30)
+    returns = np.random.normal(0.0004, 0.012, size=days)
     values = base_value * (1 + returns).cumprod()
     
     fig = go.Figure()
@@ -103,14 +155,18 @@ def generate_msi20_chart(bourse_data=None):
     ))
     
     fig.update_layout(
-        title="Évolution du MSI20 (30 jours)",
+        title=f"Évolution du MSI20 ({days} jours)",
         xaxis_title="Date",
         yaxis_title="Valeur",
         hovermode='x unified',
         plot_bgcolor='white',
         paper_bgcolor='white',
         height=400,
-        margin=dict(l=50, r=30, t=50, b=30)
+        margin=dict(l=50, r=30, t=50, b=30),
+        xaxis=dict(
+            rangeslider=dict(visible=True),  # Slider pour zoomer
+            type="date"
+        )
     )
     
     return fig
@@ -232,6 +288,32 @@ def render():
     # ---------------------------------------------------------------------
     # SECTION 1 : INDICES EN TEMPS RÉEL
     # ---------------------------------------------------------------------
+        # Statut du marché
+    market_status = get_market_status()
+    
+    # Badge de statut
+    status_color = "#28a745" if market_status['is_open'] else "#dc3545"
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, {status_color}22 0%, {status_color}11 100%); 
+                padding: 20px; border-radius: 10px; border-left: 5px solid {status_color}; 
+                margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="margin: 0; color: {status_color}; font-size: 20px;">
+                    {market_status['status_text']}
+                </h3>
+                <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">
+                    🕐 Heure locale : <b>{market_status['current_time']}</b> | 
+                    Horaires : 09:00 - 15:30 (Lun-Ven)
+                </p>
+            </div>
+            <div style="font-size: 48px;">
+                {'🟢' if market_status['is_open'] else '🔴'}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("### 📈 Indices en Temps Réel")
     
     bourse_data = st.session_state.get('bourse_data', {})
@@ -279,18 +361,36 @@ def render():
     st.markdown("---")
     
     # ---------------------------------------------------------------------
-    # SECTION 2 : GRAPHIQUES DES INDICES
+    # SECTION 2 : GRAPHIQUES DES INDICES (AVEC SÉLECTEUR D'INTERVALLE)
     # ---------------------------------------------------------------------
     st.markdown("### 📊 Évolution des Indices")
+    
+    # Sélecteur d'intervalle
+    interval_options = {
+        '1 jour': 1,
+        '5 jours': 5,
+        '10 jours': 10,
+        '30 jours': 30,
+        '3 mois': 90
+    }
+    
+    selected_interval = st.select_slider(
+        "🔍 Intervalle d'affichage :",
+        options=list(interval_options.keys()),
+        value='10 jours',
+        help="Sélectionnez la période à afficher sur les graphiques"
+    )
+    
+    days = interval_options[selected_interval]
     
     tab1, tab2 = st.tabs(["📈 MASI", "📊 MSI20"])
     
     with tab1:
-        fig_masi = generate_masi_chart(bourse_data)
+        fig_masi = generate_masi_chart(bourse_data, days=days)
         st.plotly_chart(fig_masi, use_container_width=True)
     
     with tab2:
-        fig_msi20 = generate_msi20_chart(bourse_data)
+        fig_msi20 = generate_msi20_chart(bourse_data, days=days)
         st.plotly_chart(fig_msi20, use_container_width=True)
     
     st.markdown("---")
