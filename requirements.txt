@@ -1,8 +1,30 @@
+# =============================================================================
+# NEWZ - Market Data Platform
+# Dependencies
+# =============================================================================
+
+# Core
 streamlit>=1.28.0
 pandas>=2.0.0
 numpy>=1.24.0
+
+# Visualization
 plotly>=5.17.0
+
+# Web Scraping
 requests>=2.31.0
 beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Excel
 openpyxl>=3.1.0
+xlrd>=2.0.0
+
+# Utilities
 Pillow>=10.0.0
+
+# Scheduling (pour mises à jour auto)
+schedule>=1.2.0
+
+# Yahoo Finance (alternative)
+yfinance>=0.2.28
