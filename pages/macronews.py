@@ -230,7 +230,7 @@ def render():
         # News de secours
         st.info("**📋 Actualités Récentes (Démo)**")
         demo_news = [
-            {'title': 'Bank Al-Maghrib maintient son taux directeur à 3%', 'summary': 'Le conseil de Bank Al-Maghrib a décidé de maintenir son taux directeur inchangé...', 'source': 'Ilboursa', 'category': 'Monétaire'},
+            {'title': 'Bank Al-Maghrib maintient son taux directeur à 3%', 'summary': 'Le conseil de Bank Al-Maghrib a décidé de maintenir son taux directeur...', 'source': 'Ilboursa', 'category': 'Monétaire'},
             {'title': 'L\'inflation au Maroc ralentit à -0,8%', 'summary': 'Selon le HCP, l\'inflation est devenue négative...', 'source': 'HCP', 'category': 'Économie'},
             {'title': 'Le MASI franchit la barre des 12 500 points', 'summary': 'La bourse de Casablanca continue sa progression...', 'source': 'Bourse de Casa', 'category': 'Marché'},
         ]
@@ -240,7 +240,6 @@ def render():
                 st.write(news['summary'])
     
     st.markdown("---")
-    
     # ---------------------------------------------------------------------
     # SECTION 2 : INFLATION
     # ---------------------------------------------------------------------
