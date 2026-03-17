@@ -114,8 +114,8 @@ st.markdown(f"""
 
 st.markdown(f"""
 <div class="main-header">
-    <h1>🏦 CDG Capital</h1>
-    <p><b>{APP_INFO.get('name', 'Newz')}</b> — Market Data Platform v{APP_INFO.get('version', '2.0.0')}</p>
+    <h1>NEWZ</h1>
+    <p> Market Data Platform v{APP_INFO.get('version', '2.0.0')}</p>
     <p style="font-size: 11px; opacity: 0.7;">{APP_INFO.get('copyright', '© 2025 CDG Capital')} | {APP_INFO.get('confidentiality', 'Usage interne uniquement')}</p>
 </div>
 """, unsafe_allow_html=True)
@@ -146,7 +146,7 @@ pg.run()
 
 st.markdown(f"""
 <div class="footer">
-    <p><b>{APP_INFO.get('name', 'Newz')} v{APP_INFO.get('version', '2.0.0')}</b> | {APP_INFO.get('author', 'CDG Capital - Market Data Team')}</p>
+    <p><b>{APP_INFO.get('name', 'Newz')} v{APP_INFO.get('version', '2.0.0')}</b> | {APP_INFO.get('author', 'CDG Capital - OULMADANI Ilyas & ATANANE Oussama')}</p>
     <p>Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</p>
     <p>Données : Bourse de Casablanca | Bank Al-Maghrib | HCP | Ilboursa</p>
 </div>
