@@ -125,26 +125,33 @@ def render():
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("📥 Aller à Data Ingestion", use_container_width=True, type="primary"):
-            st.session_state.current_page = "data_ingestion"
-            st.rerun()
+        st.link_button(
+            label="📥 Data Ingestion",
+            url="/data_ingestion",
+            use_container_width=True,
+            type="primary"
+        )
     
     with col2:
-        if st.button("📊 Voir BDC Statut", use_container_width=True):
-            st.session_state.current_page = "bdc_statut"
-            st.rerun()
+        st.link_button(
+            label="📊 BDC Statut",
+            url="/bdc_statut",
+            use_container_width=True
+        )
     
     with col3:
-        if st.button("🏦 Voir BAM", use_container_width=True):
-            st.session_state.current_page = "bam"
-            st.rerun()
+        st.link_button(
+            label="🏦 BAM",
+            url="/bam",
+            use_container_width=True
+        )
     
     with col4:
-        if st.button("📤 Générer Rapport", use_container_width=True):
-            st.session_state.current_page = "export"
-            st.rerun()
-    
-    st.markdown("<br>", unsafe_allow_html=True)
+        st.link_button(
+            label="📤 Export",
+            url="/export",
+            use_container_width=True
+        )
     
     # ---------------------------------------------------------------------
     # SECTION 5 : ÉTAT DES DONNÉES
@@ -260,6 +267,5 @@ def render():
         
         Pour toute question ou problème :
         - Vérifiez les logs d'erreur
-        - Contactez l'équipe Market Data
         - Consultez la documentation
         """)
