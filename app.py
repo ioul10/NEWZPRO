@@ -1,7 +1,7 @@
 # =============================================================================
 # NEWZ - Market Data Platform
-# Navigation Unifiée
-# Fichier : app.py
+# Fichier Principal - app.py
+# Navigation Multi-Pages
 # =============================================================================
 
 import streamlit as st
@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 from datetime import datetime
 
-# Configuration de la page
+# Configuration de la page (DOIT ÊTRE LA PREMIÈRE COMMANDE)
 st.set_page_config(
     page_title="Newz | Market Data Platform",
     page_icon="📊",
@@ -30,43 +30,17 @@ except ImportError:
         'accent': '#00a8e8',
         'success': '#28a745',
         'warning': '#ffc107',
-        'danger': '#dc3545'
+        'danger': '#dc3545',
+        'light': '#f8f9fa'
     }
-    APP_INFO = {'name': 'Newz', 'version': '2.0.0'}
+    APP_INFO = {'name': 'Newz', 'version': '2.0.0', 'author': 'CDG Capital'}
 
 # -----------------------------------------------------------------------------
-# CSS PERSONNALISÉ
-# -----------------------------------------------------------------------------
-
-st.markdown(f"""
-<style>
-    .main-header {{
-        background: linear-gradient(135deg, {COLORS['primary']} 0%, {COLORS['secondary']} 100%);
-        color: white;
-        padding: 40px;
-        border-radius: 15px;
-        margin-bottom: 30px;
-        text-align: center;
-    }}
-    .main-header h1 {{ margin: 0; font-size: 42px; }}
-    .main-header p {{ margin: 10px 0 0 0; opacity: 0.9; }}
-    
-    .footer {{
-        margin-top: 50px;
-        padding: 20px;
-        text-align: center;
-        color: #666;
-        font-size: 12px;
-        border-top: 1px solid #e0e0e0;
-    }}
-</style>
-""", unsafe_allow_html=True)
-
-# -----------------------------------------------------------------------------
-# INITIALISATION
+# INITIALISATION SESSION STATE
 # -----------------------------------------------------------------------------
 
 def init_session_state():
+    """Initialise toutes les variables de session"""
     if 'data_loaded' not in st.session_state:
         st.session_state.data_loaded = False
     if 'excel_data' not in st.session_state:
@@ -83,8 +57,56 @@ def init_session_state():
         st.session_state.export_selected_sections = ['summary', 'bdc', 'bam', 'inflation']
     if 'report_html' not in st.session_state:
         st.session_state.report_html = None
+    if 'top_movers' not in st.session_state:
+        st.session_state.top_movers = None
+    if 'correlation_period' not in st.session_state:
+        st.session_state.correlation_period = 90
 
 init_session_state()
+
+# -----------------------------------------------------------------------------
+# CSS PERSONNALISÉ
+# -----------------------------------------------------------------------------
+
+st.markdown(f"""
+<style>
+    /* Header principal */
+    .main-header {{
+        background: linear-gradient(135deg, {COLORS['primary']} 0%, {COLORS['secondary']} 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }}
+    .main-header h1 {{
+        margin: 0;
+        font-size: 36px;
+        font-weight: 700;
+    }}
+    .main-header p {{
+        margin: 10px 0 0 0;
+        opacity: 0.9;
+        font-size: 14px;
+    }}
+    
+    /* Sidebar */
+    .stSidebar {{
+        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
+    }}
+    
+    /* Footer */
+    .footer {{
+        margin-top: 50px;
+        padding: 20px;
+        text-align: center;
+        color: #666;
+        font-size: 12px;
+        border-top: 1px solid #e0e0e0;
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
 # HEADER
@@ -92,27 +114,62 @@ init_session_state()
 
 st.markdown(f"""
 <div class="main-header">
-    <h1>NEWZ</h1>
-    <p>Market Data Platform v{APP_INFO['version']}</p>
+    <h1>🏦 CDG Capital</h1>
+    <p><b>{APP_INFO.get('name', 'Newz')}</b> — Market Data Platform v{APP_INFO.get('version', '2.0.0')}</p>
+    <p style="font-size: 11px; opacity: 0.7;">{APP_INFO.get('copyright', '© 2025 CDG Capital')} | {APP_INFO.get('confidentiality', 'Usage interne uniquement')}</p>
 </div>
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# NAVIGATION AVEC st.navigation()
+# NAVIGATION MULTI-PAGES
 # -----------------------------------------------------------------------------
 
-# Définir les pages
+# Définir les pages de l'application
 pages = [
-    st.Page("pages/home.py", title="Accueil", icon="🏠"),
-    st.Page("pages/data_ingestion.py", title="Data Ingestion", icon="📥"),
-    st.Page("pages/bdc_statut.py", title="BDC Statut", icon="📊"),
-    st.Page("pages/bam.py", title="BAM", icon="🏦"),
-    st.Page("pages/macronews.py", title="Macronews", icon="📰"),
-    st.Page("pages/export.py", title="Export", icon="📤"),
+    st.Page(
+        "pages/home.py",
+        title="Accueil",
+        icon="🏠",
+        url_path="home"
+    ),
+    st.Page(
+        "pages/data_ingestion.py",
+        title="Data Ingestion",
+        icon="📥",
+        url_path="data_ingestion"
+    ),
+    st.Page(
+        "pages/bdc_statut.py",
+        title="BDC Statut",
+        icon="📊",
+        url_path="bdc_statut"
+    ),
+    st.Page(
+        "pages/bam.py",
+        title="BAM",
+        icon="🏦",
+        url_path="bam"
+    ),
+    st.Page(
+        "pages/macronews.py",
+        title="Macronews",
+        icon="📰",
+        url_path="macronews"
+    ),
+    st.Page(
+        "pages/export.py",
+        title="Export",
+        icon="📤",
+        url_path="export"
+    ),
 ]
 
 # Créer la navigation
-pg = st.navigation(pages)
+pg = st.navigation(
+    pages,
+    position="sidebar",
+    title="Navigation"
+)
 
 # Exécuter la page sélectionnée
 pg.run()
@@ -123,7 +180,8 @@ pg.run()
 
 st.markdown(f"""
 <div class="footer">
-    <p><b>{APP_INFO['name']} v{APP_INFO['version']}</b> | {APP_INFO.get('author', 'CDG Capital')}</p>
-    <p>© 2025 CDG Capital | Usage interne uniquement</p>
+    <p><b>{APP_INFO.get('name', 'Newz')} v{APP_INFO.get('version', '2.0.0')}</b> | {APP_INFO.get('author', 'CDG Capital - Market Data Team')}</p>
+    <p>Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</p>
+    <p>Données : Bourse de Casablanca | Bank Al-Maghrib | HCP | Ilboursa</p>
 </div>
 """, unsafe_allow_html=True)
