@@ -33,7 +33,7 @@ except ImportError:
         'danger': '#dc3545',
         'light': '#f8f9fa'
     }
-    APP_INFO = {'name': 'Newz', 'version': '2.0.0', 'author': 'CDG Capital'}
+    APP_INFO = {'name': 'Newz', 'version': '0.1.0', 'author': 'OULMADANI Ilyas'}
 
 # -----------------------------------------------------------------------------
 # INITIALISATION SESSION STATE
@@ -115,8 +115,8 @@ st.markdown(f"""
 st.markdown(f"""
 <div class="main-header">
     <h1>NEWZ</h1>
-    <p> Market Data Platform v{APP_INFO.get('version', '2.0.0')}</p>
-    <p style="font-size: 11px; opacity: 0.7;">{APP_INFO.get('copyright', '© 2025 CDG Capital')} | {APP_INFO.get('confidentiality', 'Usage interne uniquement')}</p>
+    <p> Market Data Platform v{APP_INFO.get('version', '0.1.0')}</p>
+    <p style="font-size: 11px; opacity: 0.7;">{APP_INFO.get('copyright', '© 2026 CDG Capital')} | {APP_INFO.get('confidentiality')}</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -146,7 +146,7 @@ pg.run()
 
 st.markdown(f"""
 <div class="footer">
-    <p><b>{APP_INFO.get('name', 'Newz')} v{APP_INFO.get('version', '2.0.0')}</b> | {APP_INFO.get('author', 'CDG Capital - OULMADANI Ilyas & ATANANE Oussama')}</p>
+    <p><b>{APP_INFO.get('name', 'Newz')} v{APP_INFO.get('version', '0.1.0')}</b> | {APP_INFO.get('author', 'CDG Capital - OULMADANI Ilyas & ATANANE Oussama')}</p>
     <p>Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</p>
     <p>Données : Bourse de Casablanca | Bank Al-Maghrib | HCP | Ilboursa</p>
 </div>
