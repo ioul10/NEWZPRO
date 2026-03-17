@@ -289,7 +289,7 @@ def render():
     
     news_data = st.session_state.get('news_data', [])
     
-    if news_
+    if news_data:
         for i, news in enumerate(news_data[:10]):
             with st.expander(f"📄 {news['title']}", expanded=(i < 3)):
                 col1, col2 = st.columns([4, 1])
