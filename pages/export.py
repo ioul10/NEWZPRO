@@ -302,7 +302,7 @@ def generate_report_html():
         """
     
     # SECTION 4 : NEWS
-    if 'news' in selected and news_
+    if 'news' in selected and news_data:
         html += """<div class="section"><h2>📰 Actualités</h2>"""
         for news in news_data[:8]:
             html += f"""<div class="news-item"><b>{news.get('title', 'N/A')}</b><br>{news.get('summary', '')[:150]}</div>"""
