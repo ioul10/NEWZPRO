@@ -301,7 +301,7 @@ def generate_report_html():
         html += '</div>'
     
     # SECTION 4 : NEWS
-    if 'news' in selected and news_
+    if 'news' in selected and news_data:
         html += '<div class="section"><h2>📰 Actualités</h2>'
         for news in news_data[:10]:
             title = news.get('title', 'N/A')
