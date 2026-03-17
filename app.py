@@ -103,7 +103,7 @@ st.markdown(f"""
 
 # Définir les pages
 pages = [
-    st.Page("pages/acceuil.py", title="Accueil", icon="🏠"),
+    st.Page("pages/home.py", title="Accueil", icon="🏠"),
     st.Page("pages/data_ingestion.py", title="Data Ingestion", icon="📥"),
     st.Page("pages/bdc_statut.py", title="BDC Statut", icon="📊"),
     st.Page("pages/bam.py", title="BAM", icon="🏦"),
