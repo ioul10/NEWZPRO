@@ -1102,3 +1102,46 @@ def render():
 
 # ─── ENTRY POINT ───────────────────────────────────────────────────────────────
 render()
+
+# ─── ALIASES DE COMPATIBILITÉ ─────────────────────────────────────────────────
+# Anciens noms utilisés par export_rapport.py ou d'autres pages
+# → redirigent vers les nouvelles fonctions sans rien casser
+
+def generate_bdt_curve_chart(excel_data=None):
+    """Alias vers build_bdt_chart (compatibilité ancienne API)"""
+    fig, _ = build_bdt_chart(excel_data or {})
+    return fig
+
+def generate_monia_chart(excel_data=None):
+    """Alias vers build_monia_chart (compatibilité ancienne API)"""
+    fig, _, _, _ = build_monia_chart(excel_data or {})
+    return fig
+
+def generate_fx_chart(excel_data=None, pair='EUR/MAD'):
+    """
+    Alias vers build_fx_history_chart (compatibilité ancienne API).
+    Retourne (fig, current_rate, prev_rate) comme l'ancienne version.
+    """
+    sym = 'EUR' if 'EUR' in pair else 'USD'
+    # On reconstruit un hist_dict depuis les données Excel si disponibles
+    fx_hist = {}
+    if excel_data:
+        sheet = 'EUR_MAD' if sym == 'EUR' else 'USD_MAD'
+        df = excel_data.get(sheet, pd.DataFrame())
+        if not df.empty:
+            date_col = next((c for c in df.columns if 'date' in c.lower()), None)
+            rate_col = next((c for c in df.columns if 'mid' in c.lower() or 'rate' in c.lower()), None)
+            if date_col and rate_col:
+                df2 = df[[date_col, rate_col]].dropna()
+                df2.columns = ['date', 'rate']
+                df2 = df2[df2['rate'] > 0].sort_values('date')
+                fx_hist[sym] = {str(row['date']): row['rate'] for _, row in df2.iterrows()}
+
+    fig, last_val, pct_chg, _ = build_fx_history_chart(fx_hist, sym)
+
+    # Recalculer prev_rate depuis le dict si possible
+    hist_dict = fx_hist.get(sym, {})
+    vals = list(hist_dict.values()) if hist_dict else []
+    prev_val = vals[0] if len(vals) >= 2 else last_val
+
+    return fig, last_val, prev_val
