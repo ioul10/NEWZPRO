@@ -17,20 +17,24 @@ import re
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+_COLORS_DEFAULTS = {
+    'primary':   '#0a2540',
+    'secondary': '#00a8e8',
+    'success':   '#00c48c',
+    'danger':    '#ff4d6d',
+    'warning':   '#f4c430',
+    'accent':    '#635bff',
+    'bg':        '#f0f4f8',
+    'card':      '#ffffff',
+    'muted':     '#64748b',
+}
+
 try:
-    from config.settings import COLORS
+    from config.settings import COLORS as _IMPORTED_COLORS
+    # Merger : on garde les valeurs importées ET on complète les clés manquantes
+    COLORS = {**_COLORS_DEFAULTS, **_IMPORTED_COLORS}
 except ImportError:
-    COLORS = {
-        'primary':   '#0a2540',
-        'secondary': '#00a8e8',
-        'success':   '#00c48c',
-        'danger':    '#ff4d6d',
-        'warning':   '#f4c430',
-        'accent':    '#635bff',
-        'bg':        '#f0f4f8',
-        'card':      '#ffffff',
-        'muted':     '#64748b',
-    }
+    COLORS = _COLORS_DEFAULTS
 
 # ─── STYLE GLOBAL ─────────────────────────────────────────────────────────────
 
