@@ -313,7 +313,7 @@ def render():
     
     news_data = st.session_state.get('news_data', [])
     
-    if news_
+    if news_data:
         for i, news in enumerate(news_data[:10]):
             with st.expander(f"📄 {news.get('title', 'N/A')}", expanded=(i < 3)):
                 st.write(f"**Source :** {news.get('source', 'N/A')}")
