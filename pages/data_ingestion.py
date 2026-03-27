@@ -19,6 +19,13 @@ import json
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+try:
+    from utils.design import inject_global_css, market_clock_html, page_hero
+    inject_global_css()
+except Exception:
+    pass
+
+
 # ─── CONFIG (merge safe) ──────────────────────────────────────────────────────
 
 _DEFAULTS = {
@@ -102,123 +109,7 @@ MSI20_TICKERS = {
     'Lydec':             'LYD.CS',
 }
 
-# ─── STYLE ────────────────────────────────────────────────────────────────────
-
-st.markdown(f"""
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=IBM+Plex+Mono:wght@400;600&family=Mulish:wght@300;400;500;600;700&display=swap');
-
-  html, body, [class*="css"] {{
-      font-family: 'Mulish', sans-serif;
-      background: {COLORS['bg']};
-  }}
-
-  .page-hero {{
-      background: linear-gradient(135deg, {COLORS['primary']} 0%, #162d52 100%);
-      border-radius: 18px; padding: 28px 36px; margin-bottom: 28px;
-      color: white; position: relative; overflow: hidden;
-  }}
-  .page-hero::after {{
-      content: ''; position: absolute; top: -30px; right: -30px;
-      width: 180px; height: 180px; border-radius: 50%;
-      background: rgba(6,182,212,.1);
-  }}
-  .hero-title {{
-      font-family: 'Syne', sans-serif; font-size: 25px;
-      font-weight: 800; margin: 0;
-  }}
-  .hero-sub {{
-      font-family: 'IBM Plex Mono', monospace; font-size: 12px;
-      opacity: .65; margin-top: 6px;
-  }}
-
-  /* SECTION TABS */
-  .step-card {{
-      background: {COLORS['card']};
-      border: 1px solid {COLORS['border']};
-      border-radius: 16px; padding: 24px 28px; margin-bottom: 20px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.05);
-  }}
-  .step-title {{
-      font-family: 'Syne', sans-serif; font-size: 16px;
-      font-weight: 700; color: {COLORS['primary']};
-      display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
-  }}
-  .step-badge {{
-      background: {COLORS['accent']}22; color: {COLORS['accent']};
-      border-radius: 8px; padding: 2px 10px;
-      font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600;
-  }}
-
-  /* STATUS CHIPS */
-  .chip-ok  {{ display:inline-block; background:#dcfce7; color:#166534;
-               border-radius:20px; padding:3px 12px; font-size:11px; font-weight:700; }}
-  .chip-err {{ display:inline-block; background:#fee2e2; color:#991b1b;
-               border-radius:20px; padding:3px 12px; font-size:11px; font-weight:700; }}
-  .chip-wait {{ display:inline-block; background:#f1f5f9; color:{COLORS['muted']};
-                border-radius:20px; padding:3px 12px; font-size:11px; font-weight:700; }}
-
-  /* KPI ROW */
-  .kpi-row {{ display:flex; gap:16px; flex-wrap:wrap; margin-bottom:16px; }}
-  .kpi-mini {{
-      background:{COLORS['card']}; border:1px solid {COLORS['border']};
-      border-radius:12px; padding:14px 18px; flex:1; min-width:120px;
-  }}
-  .kpi-mini-label {{
-      font-family:'IBM Plex Mono',monospace; font-size:9px;
-      letter-spacing:1.5px; text-transform:uppercase; color:{COLORS['muted']};
-  }}
-  .kpi-mini-value {{
-      font-family:'Syne',sans-serif; font-size:22px;
-      font-weight:700; color:{COLORS['primary']}; margin-top:4px;
-  }}
-  .kpi-mini-delta-up   {{ font-size:12px; color:{COLORS['success']}; font-weight:600; }}
-  .kpi-mini-delta-down {{ font-size:12px; color:{COLORS['danger']};  font-weight:600; }}
-
-  /* NEWS CARD */
-  .news-card {{
-      background:{COLORS['card']}; border:1px solid {COLORS['border']};
-      border-radius:12px; padding:14px 18px; margin-bottom:10px;
-      transition: box-shadow .15s;
-  }}
-  .news-card:hover {{ box-shadow: 0 4px 16px rgba(0,0,0,.09); }}
-  .news-card-title {{ font-size:14px; font-weight:600; color:{COLORS['primary']}; line-height:1.4; }}
-  .news-card-meta  {{ font-size:11px; color:{COLORS['muted']}; margin-top:5px; }}
-  .news-card-summary {{ font-size:12px; color:{COLORS['muted']}; margin-top:8px; line-height:1.6; }}
-  .src-badge {{
-      display:inline-block; border-radius:5px; padding:2px 8px;
-      font-size:10px; font-weight:700; margin-right:5px;
-      background:{COLORS['accent']}15; color:{COLORS['accent']};
-  }}
-  .cat-badge {{
-      display:inline-block; border-radius:5px; padding:2px 8px;
-      font-size:10px; font-weight:700;
-      background:{COLORS['warning']}20; color:#92400e;
-  }}
-
-  /* EXCEL TABLE */
-  .sheet-pill {{
-      display:inline-block; background:{COLORS['primary']}15; color:{COLORS['primary']};
-      border-radius:8px; padding:3px 12px; font-size:12px; font-weight:600;
-      margin:3px;
-  }}
-  .sheet-pill.ok {{ background:#dcfce7; color:#166534; }}
-  .sheet-pill.empty {{ background:#f1f5f9; color:{COLORS['muted']}; }}
-
-  /* SOURCE INFO BAR */
-  .src-bar {{
-      font-family:'IBM Plex Mono',monospace; font-size:10px;
-      background:{COLORS['light']}; border:1px solid {COLORS['border']};
-      border-radius:8px; padding:6px 14px; color:{COLORS['muted']};
-      margin-top:8px; display:inline-block;
-  }}
-
-  div[data-testid="stExpander"] {{
-      border:1px solid {COLORS['border']} !important;
-      border-radius:12px !important;
-  }}
-</style>
-""", unsafe_allow_html=True)
+# CSS injected via utils/design.py
 
 # ─── SESSION STATE ─────────────────────────────────────────────────────────────
 
@@ -575,16 +466,27 @@ def save_bourse(data):
 
 def render():
 
-    # ── Hero ───────────────────────────────────────────────────────────────────
+    # ── Hero ──────────────────────────────────────────────────────────────────
     now_str = datetime.now().strftime("%d %b %Y — %H:%M")
     st.markdown(f"""
     <div class="page-hero">
       <div style="position:relative;z-index:1;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;
+                    letter-spacing:2px;text-transform:uppercase;opacity:.55;">
+          NEWZ · CDG Capital · Market Data Platform
+        </div>
         <p class="hero-title">📥 Data Ingestion</p>
         <p class="hero-sub">Import · Scraping · Validation — {now_str}</p>
       </div>
     </div>
     """, unsafe_allow_html=True)
+
+    try:
+        from utils.design import market_clock_html
+        st.components.v1.html(market_clock_html(), height=65)
+    except Exception:
+        pass
+
 
     # ── Dashboard d'état ───────────────────────────────────────────────────────
     excel_data  = st.session_state.excel_data
