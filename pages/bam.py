@@ -471,13 +471,17 @@ def build_bdt_chart(excel_data):
                           if any(x in low for x in ['hist_date', 'date', 'dt'])), None)
 
         if tenor_key and rate_key:
-            df_w = df_courbe[[tenor_key, rate_key]].copy()
+            # Filtrer sur la dernière date si date_key existe
             if date_key:
                 dates_parsed = pd.to_datetime(df_courbe[date_key], errors='coerce')
-                mask = dates_parsed == dates_parsed.dropna().max()
+                last_date    = dates_parsed.dropna().max()
+                mask         = dates_parsed == last_date
                 df_w = df_courbe.loc[mask, [tenor_key, rate_key]].copy()
-            df_w.columns = ['tenor', 'rate'] 
-            df_w = df_w[['tenor','rate']].dropna()
+            else:
+                df_w = df_courbe[[tenor_key, rate_key]].copy()
+            # Renommer proprement (exactement 2 colonnes)
+            df_w.columns = ['tenor', 'rate']
+            df_w = df_w[['tenor', 'rate']].dropna()
             df_w['rate'] = pd.to_numeric(df_w['rate'], errors='coerce')
             df_w = df_w.dropna().drop_duplicates('tenor')
             # Convertir tenor en numérique pour trier (1W<1M<3M<1Y...)
@@ -619,15 +623,18 @@ def build_monia_chart(excel_data):
         rates = pd.Series(np.round(base + noise, 4), index=dates)
         source_label = 'Données de référence (importez votre Excel)'
 
-    rates_s = pd.Series(rates.values if hasattr(rates, 'values') else rates)
-    last_val = float(rates_s.iloc[-1])
-    prev_val = float(rates_s.iloc[-2]) if len(rates_s) > 1 else last_val
-    delta    = last_val - prev_val
+    # Aligner dates et rates proprement (reset index pour éviter désalignement)
+    dates_list = list(dates) if hasattr(dates, '__iter__') else list(dates.values)
+    rates_list = list(rates.values if hasattr(rates, 'values') else rates)
+    rates_s    = pd.Series(rates_list)
+    last_val   = float(rates_s.iloc[-1])
+    prev_val   = float(rates_s.iloc[-2]) if len(rates_s) > 1 else last_val
+    delta      = last_val - prev_val
 
     fig = go.Figure()
 
     fig.add_trace(go.Scatter(
-        x=list(dates), y=list(rates_s),
+        x=dates_list, y=rates_list,
         mode='lines',
         name='MONIA',
         line=dict(color=COLORS['accent'], width=2.5),
@@ -647,7 +654,7 @@ def build_monia_chart(excel_data):
 
     y_min = float(rates_s.min())
     y_max = float(rates_s.max())
-    pad   = max((y_max - y_min) * 0.4, 0.01)
+    pad   = max((y_max - y_min) * 0.15, 0.01)
 
     fig.update_layout(
         plot_bgcolor='white', paper_bgcolor='rgba(0,0,0,0)',
