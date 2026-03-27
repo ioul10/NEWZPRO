@@ -485,19 +485,6 @@ def render():
         st.components.v1.html(market_clock_html(), height=65)
     except Exception:
         pass
-    st.markdown(f"""
-    <div style="display:flex; justify-content:space-between; align-items:flex-start;
-                background:white; padding:24px 30px; border-radius:16px;
-                box-shadow:0 1px 6px rgba(0,0,0,.06); margin-bottom:28px;">
-        <div>
-            <p class="page-title">📊 Macronews</p>
-            <p class="page-sub">Tableau de bord macroéconomique — Maroc</p>
-        </div>
-        <div style="text-align:right; font-size:12px; color:{COLORS['muted']}; margin-top:4px;">
-            <span style="font-family:'Space Mono',monospace;">{now_str}</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
 
     # ── SECTION 1 : INFLATION ──────────────────────────────────────────────────
     st.markdown('<p class="section-header">📈 Indicateur clé — Inflation IPC</p>', unsafe_allow_html=True)
