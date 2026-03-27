@@ -445,36 +445,59 @@ CALENDAR_EVENTS = [
 # ─── GRAPHIQUES ────────────────────────────────────────────────────────────────
 
 def build_bdt_chart(excel_data):
-    """Courbe des taux BDT depuis l'Excel ou données de référence"""
+    """Courbe des taux BDT depuis l'Excel ou données de référence.
+    
+    Gère 3 formats de feuille MADBDT_52W :
+    1. tenor + taux  → courbe des taux (format idéal)
+    2. date + taux   → série temporelle BDT 52W
+    3. Plusieurs colonnes de taux (maturités différentes) → courbe multi-tenors
+    """
     df = excel_data.get('MADBDT_52W', pd.DataFrame())
+    tenors, rates, source_label = None, None, None
 
     if not df.empty:
-        date_col = next((c for c in df.columns if 'date' in c.lower()), None)
-        rate_col = next((c for c in df.columns
-                         if any(x in c.lower() for x in ['taux', 'rate', 'zero'])), None)
+        cols_low = {c: c.lower() for c in df.columns}
+        
+        # Détecter les colonnes clés
         tenor_col = next((c for c in df.columns
-                          if any(x in c.lower() for x in ['tenor', 'echeance', 'mat'])), None)
+                          if any(x in cols_low[c] for x in ['tenor', 'echeance', 'mat', 'maturite'])), None)
+        date_col  = next((c for c in df.columns
+                          if any(x in cols_low[c] for x in ['date', 'quote_date', 'dt'])), None)
+        rate_col  = next((c for c in df.columns
+                          if any(x in cols_low[c] for x in ['taux', 'rate', 'zero', 'tx', 'rendement'])), None)
 
-        # Si on a un tenor + taux → courbe des taux
+        # Cas 1 : tenor explicite + taux → courbe des taux cross-section
         if tenor_col and rate_col:
-            df_plot = df[[tenor_col, rate_col]].dropna()
-            df_plot.columns = ['tenor', 'rate']
-            tenors = df_plot['tenor'].astype(str).tolist()
-            rates  = df_plot['rate'].tolist()
-            source_label = 'Excel importé'
-        elif date_col and rate_col:
-            # Série temporelle — on affiche l'évolution
-            df_plot = df[[date_col, rate_col]].dropna()
-            df_plot.columns = ['date', 'rate']
-            df_plot['date'] = pd.to_datetime(df_plot['date'], errors='coerce')
-            df_plot = df_plot.dropna().sort_values('date')
-            tenors = df_plot['date'].dt.strftime('%b %Y').tolist()
-            rates  = df_plot['rate'].tolist()
-            source_label = 'Excel importé'
-        else:
-            tenors, rates, source_label = None, None, None
-    else:
-        tenors, rates, source_label = None, None, None
+            df_p = df[[tenor_col, rate_col]].dropna()
+            df_p.columns = ['tenor', 'rate']
+            df_p['rate'] = pd.to_numeric(df_p['rate'], errors='coerce')
+            df_p = df_p.dropna()
+            if not df_p.empty:
+                tenors = df_p['tenor'].astype(str).tolist()
+                rates  = df_p['rate'].tolist()
+                source_label = 'Excel importé (courbe cross-section)'
+
+        # Cas 2 : date + taux unique → série temporelle
+        elif date_col and rate_col and not tenors:
+            df_p = df[[date_col, rate_col]].dropna()
+            df_p.columns = ['date', 'rate']
+            df_p['date'] = pd.to_datetime(df_p['date'], errors='coerce')
+            df_p['rate'] = pd.to_numeric(df_p['rate'], errors='coerce')
+            df_p = df_p.dropna().sort_values('date')
+            if not df_p.empty:
+                tenors = df_p['date'].dt.strftime('%d/%m/%y').tolist()
+                rates  = df_p['rate'].tolist()
+                source_label = 'Excel importé (série temporelle BDT 52W)'
+
+        # Cas 3 : plusieurs colonnes numériques = maturités multiples
+        elif not tenors:
+            num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+            if len(num_cols) >= 3:
+                last_row = df[num_cols].dropna().iloc[-1] if not df[num_cols].dropna().empty else None
+                if last_row is not None:
+                    tenors = [str(c) for c in num_cols]
+                    rates  = last_row.tolist()
+                    source_label = 'Excel importé (dernière ligne)'
 
     # Fallback courbe de référence (taux BAM mars 2025)
     if not tenors:
@@ -690,15 +713,35 @@ def build_fx_history_chart(fx_hist, sym='EUR'):
 def render():
     now_str = datetime.now().strftime("%d %b %Y — %H:%M")
 
-    # ── Hero ─────────────────────────────────────────────────────────────────
+    # ── Hero ──────────────────────────────────────────────────────────────────
+    st.markdown(f"""
+    <div class="page-hero">
+      <div style="position:relative;z-index:1;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;
+                    letter-spacing:2px;text-transform:uppercase;opacity:.55;">
+          NEWZ · CDG Capital · Bank Al-Maghrib
+        </div>
+        <p class="hero-title">🏦 BAM — Bank Al-Maghrib</p>
+        <p class="hero-sub">Taux Directeur · Courbe BDT · MONIA · Devises EUR/MAD · USD/MAD — {now_str}</p>
+        <span style="display:inline-block;background:rgba(6,182,212,.2);border:1px solid rgba(6,182,212,.35);
+                     color:#67e8f9;border-radius:6px;padding:2px 10px;margin-top:8px;
+                     font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;">Taux 2.75%</span>
+        <span style="display:inline-block;background:rgba(6,182,212,.2);border:1px solid rgba(6,182,212,.35);
+                     color:#67e8f9;border-radius:6px;padding:2px 10px;margin-top:8px;margin-left:4px;
+                     font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;">BDT</span>
+        <span style="display:inline-block;background:rgba(6,182,212,.2);border:1px solid rgba(6,182,212,.35);
+                     color:#67e8f9;border-radius:6px;padding:2px 10px;margin-top:8px;margin-left:4px;
+                     font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;">MONIA</span>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     try:
-        from utils.design import page_hero, market_clock_html
-        st.markdown(page_hero('🏦','BAM — Bank Al-Maghrib',
-            'Taux Directeur · Courbe BDT · MONIA · Devises EUR/MAD · USD/MAD',
-            tags=['Taux 2.75%','BDT','MONIA','EUR/MAD','USD/MAD']), unsafe_allow_html=True)
+        from utils.design import market_clock_html
         st.components.v1.html(market_clock_html(), height=65)
     except Exception:
         pass
+
 
     excel_data = st.session_state.get('excel_data', {})
     fx_data    = st.session_state.get('fx_data', {})
