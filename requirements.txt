@@ -1,6 +1,6 @@
 # =============================================================================
-# NEWZ - Market Data Platform
-# Dependencies
+# NEWZ - Market Data Platform v2.0
+# Requirements
 # =============================================================================
 
 # Core
@@ -11,25 +11,21 @@ numpy>=1.24.0
 # Visualization
 plotly>=5.17.0
 
-# Web Scraping
+# Web Scraping & RSS
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
+feedparser>=6.0.0
+
+# Finance Data
+yfinance>=0.2.28
 
 # Excel
 openpyxl>=3.1.0
 xlrd>=2.0.0
 
+# Timezone (horloge dynamique)
+pytz>=2023.3
+
 # Utilities
 Pillow>=10.0.0
-
-# Scheduling (pour mises à jour auto)
-schedule>=1.2.0
-
-# Yahoo Finance (alternative)
-yfinance>=0.2.28
-lxml>=4.9.0
-
-feedparser
-
-
