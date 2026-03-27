@@ -445,117 +445,123 @@ CALENDAR_EVENTS = [
 # ─── GRAPHIQUES ────────────────────────────────────────────────────────────────
 
 def build_bdt_chart(excel_data):
-    """Courbe des taux BDT depuis l'Excel ou données de référence.
-    
-    Gère 3 formats de feuille MADBDT_52W :
-    1. tenor + taux  → courbe des taux (format idéal)
-    2. date + taux   → série temporelle BDT 52W
-    3. Plusieurs colonnes de taux (maturités différentes) → courbe multi-tenors
     """
-    df = excel_data.get('MADBDT_52W', pd.DataFrame())
-    tenors, rates, source_label = None, None, None
+    Courbe des Taux BDT construite depuis l'Excel importé.
+    
+    Priorité :
+    1. Feuille "Courbe MAD" : ccy_iso | hist_date | tenor_mat | zero_rate
+       → Vraie courbe des taux cross-section (plusieurs maturités à une date)
+       → On prend la dernière date disponible
+    2. Feuille "MADBDT_52W" : date | taux
+       → Série temporelle du taux BDT 52W (une seule maturité)
+    3. Fallback : courbe de référence BAM
+    """
+    tenors, rates, source_label, chart_type = None, None, None, 'series'
 
-    if not df.empty:
-        cols_low = {c: c.lower() for c in df.columns}
-        
-        # Détecter les colonnes clés
-        tenor_col = next((c for c in df.columns
-                          if any(x in cols_low[c] for x in ['tenor', 'echeance', 'mat', 'maturite'])), None)
-        date_col  = next((c for c in df.columns
-                          if any(x in cols_low[c] for x in ['date', 'quote_date', 'dt'])), None)
-        rate_col  = next((c for c in df.columns
-                          if any(x in cols_low[c] for x in ['taux', 'rate', 'zero', 'tx', 'rendement'])), None)
+    # ── Priorité 1 : Courbe MAD (vraie courbe multi-maturités) ───────────────
+    df_courbe = excel_data.get('Courbe MAD', pd.DataFrame())
+    if not df_courbe.empty:
+        cols = {c.lower().strip(): c for c in df_courbe.columns}
+        # Chercher les colonnes tenor et taux
+        tenor_key = next((orig for low, orig in cols.items()
+                          if any(x in low for x in ['tenor', 'tenor_mat', 'maturit', 'echeance'])), None)
+        rate_key  = next((orig for low, orig in cols.items()
+                          if any(x in low for x in ['zero_rate', 'zero', 'taux', 'rate', 'rendement'])), None)
+        date_key  = next((orig for low, orig in cols.items()
+                          if any(x in low for x in ['hist_date', 'date', 'dt'])), None)
 
-        # Cas 1 : tenor explicite + taux → courbe des taux cross-section
-        if tenor_col and rate_col:
-            df_p = df[[tenor_col, rate_col]].dropna()
-            df_p.columns = ['tenor', 'rate']
-            df_p['rate'] = pd.to_numeric(df_p['rate'], errors='coerce')
-            df_p = df_p.dropna()
-            if not df_p.empty:
-                tenors = df_p['tenor'].astype(str).tolist()
-                rates  = df_p['rate'].tolist()
-                source_label = 'Excel importé (courbe cross-section)'
+        if tenor_key and rate_key:
+            df_w = df_courbe[[tenor_key, rate_key]].copy()
+            if date_key:
+                df_w[date_key] = pd.to_datetime(df_courbe[date_key], errors='coerce')
+                df_w = df_w[df_courbe[date_key] == df_courbe[date_key].dropna().max()]
+            df_w.columns = ['tenor', 'rate'] if date_key is None else ['tenor', 'rate']
+            df_w = df_w[['tenor','rate']].dropna()
+            df_w['rate'] = pd.to_numeric(df_w['rate'], errors='coerce')
+            df_w = df_w.dropna().drop_duplicates('tenor')
+            # Convertir tenor en numérique pour trier (1W<1M<3M<1Y...)
+            def tenor_to_months(t):
+                t = str(t).strip().upper()
+                if 'W' in t: return float(t.replace('W',''))/4
+                if 'M' in t: return float(t.replace('M',''))
+                if 'Y' in t: return float(t.replace('Y',''))*12
+                try: return float(t)
+                except: return 999
+            df_w['order'] = df_w['tenor'].apply(tenor_to_months)
+            df_w = df_w.sort_values('order')
+            if len(df_w) >= 2:
+                tenors = df_w['tenor'].astype(str).tolist()
+                rates  = df_w['rate'].tolist()
+                chart_type = 'curve'
+                # Trouver la date de référence
+                last_date = df_courbe[date_key].dropna().max() if date_key else None
+                date_str  = pd.to_datetime(last_date).strftime('%d/%m/%Y') if last_date is not None else 'dernière date'
+                source_label = f'Excel — Courbe MAD au {date_str}'
 
-        # Cas 2 : date + taux unique → série temporelle
-        elif date_col and rate_col and not tenors:
-            df_p = df[[date_col, rate_col]].dropna()
-            df_p.columns = ['date', 'rate']
-            df_p['date'] = pd.to_datetime(df_p['date'], errors='coerce')
-            df_p['rate'] = pd.to_numeric(df_p['rate'], errors='coerce')
-            df_p = df_p.dropna().sort_values('date')
-            if not df_p.empty:
-                tenors = df_p['date'].dt.strftime('%d/%m/%y').tolist()
-                rates  = df_p['rate'].tolist()
-                source_label = 'Excel importé (série temporelle BDT 52W)'
-
-        # Cas 3 : plusieurs colonnes numériques = maturités multiples
-        elif not tenors:
-            num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-            if len(num_cols) >= 3:
-                last_row = df[num_cols].dropna().iloc[-1] if not df[num_cols].dropna().empty else None
-                if last_row is not None:
-                    tenors = [str(c) for c in num_cols]
-                    rates  = last_row.tolist()
-                    source_label = 'Excel importé (dernière ligne)'
-
-    # Fallback courbe de référence (taux BAM mars 2025)
+    # ── Priorité 2 : MADBDT_52W (série temporelle) ───────────────────────────
     if not tenors:
-        tenors = ['1W', '1M', '2M', '3M', '6M', '9M', '1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '15Y', '20Y']
-        rates  = [2.68, 2.70, 2.72, 2.74, 2.76, 2.78, 2.80, 2.90, 3.00, 3.20, 3.40, 3.60, 3.80, 3.95]
-        source_label = 'Référence BAM (mars 2025)'
+        df_bdt = excel_data.get('MADBDT_52W', pd.DataFrame())
+        if not df_bdt.empty:
+            cols = {c.lower().strip(): c for c in df_bdt.columns}
+            date_key = next((orig for low, orig in cols.items()
+                             if any(x in low for x in ['date','dt','quote'])), None)
+            rate_key = next((orig for low, orig in cols.items()
+                             if any(x in low for x in ['taux','rate','tx','zero'])), None)
+            if date_key and rate_key:
+                df_p = df_bdt[[date_key, rate_key]].copy()
+                df_p.columns = ['date','rate']
+                df_p['date'] = pd.to_datetime(df_p['date'], errors='coerce')
+                df_p['rate'] = pd.to_numeric(df_p['rate'], errors='coerce')
+                df_p = df_p.dropna().sort_values('date')
+                if not df_p.empty:
+                    tenors = df_p['date'].dt.strftime('%d/%m/%y').tolist()
+                    rates  = df_p['rate'].tolist()
+                    chart_type = 'series'
+                    source_label = f'Excel — MADBDT 52W ({len(df_p)} observations)'
 
-    # Zone de remplissage
+    # ── Fallback ──────────────────────────────────────────────────────────────
+    if not tenors:
+        tenors = ['1W','1M','2M','3M','6M','9M','1Y','2Y','3Y','5Y','7Y','10Y','15Y','20Y']
+        rates  = [2.68,2.70,2.72,2.74,2.76,2.78,2.80,2.90,3.00,3.20,3.40,3.60,3.80,3.95]
+        chart_type = 'curve'
+        source_label = 'Référence BAM (importez votre Excel pour les vraies données)'
+
     rates_arr = np.array(rates, dtype=float)
-    base_line = [min(rates_arr) - 0.1] * len(tenors)
 
     fig = go.Figure()
-
-    # Zone de remplissage
     fig.add_trace(go.Scatter(
         x=tenors, y=rates_arr,
-        fill='tozeroy',
-        fillcolor=f'rgba(6,182,212,0.06)',
-        line=dict(width=0),
-        showlegend=False,
-        hoverinfo='skip',
+        fill='tozeroy', fillcolor='rgba(6,182,212,0.06)',
+        line=dict(width=0), showlegend=False, hoverinfo='skip',
     ))
-
-    # Courbe principale
     fig.add_trace(go.Scatter(
         x=tenors, y=rates_arr,
-        mode='lines+markers',
-        name='Courbe BDT',
-        line=dict(color=COLORS['secondary'], width=3, shape='spline', smoothing=0.8),
+        mode='lines+markers' if chart_type=='curve' else 'lines',
+        name='Courbe BDT' if chart_type=='curve' else 'MADBDT 52W',
+        line=dict(color=COLORS['secondary'], width=2.5,
+                  shape='spline' if chart_type=='curve' else 'linear',
+                  smoothing=0.8 if chart_type=='curve' else 0),
         marker=dict(size=7, color='white',
-                    line=dict(color=COLORS['secondary'], width=2)),
-        hovertemplate='<b>%{x}</b><br>Taux : %{y:.3f}%<extra></extra>',
+                    line=dict(color=COLORS['secondary'], width=2)) if chart_type=='curve' else {},
+        hovertemplate='<b>%{x}</b><br>Taux : %{y:.4f}%<extra></extra>',
     ))
-
-    # Ligne taux directeur
     td = BAM_POLICY['taux_directeur']
-    fig.add_hline(
-        y=td, line_dash='dot', line_color=COLORS['accent'],
-        line_width=1.5,
-        annotation_text=f" Taux directeur {td:.2f}%",
-        annotation_position='right',
-        annotation_font=dict(size=10, color=COLORS['accent']),
-    )
-
+    fig.add_hline(y=td, line_dash='dot', line_color=COLORS['accent'], line_width=1.5,
+                  annotation_text=f' Taux directeur {td:.2f}%',
+                  annotation_position='right',
+                  annotation_font=dict(size=10, color=COLORS['accent']))
+    y_min = min(min(rates_arr)-0.15, td-0.1)
+    y_max = max(rates_arr)+0.3
     fig.update_layout(
         plot_bgcolor='white', paper_bgcolor='rgba(0,0,0,0)',
-        height=340, margin=dict(l=50, r=60, t=20, b=40),
-        showlegend=False,
-        xaxis=dict(
-            showgrid=False, zeroline=False,
-            tickfont=dict(family='IBM Plex Mono', size=10, color=COLORS['muted']),
-        ),
-        yaxis=dict(
-            showgrid=True, gridcolor='#f1f5f9', zeroline=False,
-            tickformat='.2f', ticksuffix='%',
-            tickfont=dict(family='IBM Plex Mono', size=10, color=COLORS['muted']),
-            range=[min(rates_arr) - 0.2, max(rates_arr) + 0.3],
-        ),
+        height=340, margin=dict(l=50, r=70, t=20, b=40), showlegend=False,
+        xaxis=dict(showgrid=False, zeroline=False,
+                   tickfont=dict(family='IBM Plex Mono', size=10, color=COLORS['muted']),
+                   tickangle=-35 if chart_type=='series' else 0),
+        yaxis=dict(showgrid=True, gridcolor='#f1f5f9', zeroline=False,
+                   tickformat='.4f', ticksuffix='%',
+                   tickfont=dict(family='IBM Plex Mono', size=10, color=COLORS['muted']),
+                   range=[y_min, y_max]),
         hoverlabel=dict(bgcolor=COLORS['primary'], font_color='white',
                         font_family='IBM Plex Mono', font_size=11),
     )
@@ -563,29 +569,45 @@ def build_bdt_chart(excel_data):
 
 
 def build_monia_chart(excel_data):
-    """MONIA : série temporelle depuis l'Excel ou données de référence"""
+    """
+    MONIA : série temporelle depuis l'Excel.
+    Feuille attendue : MONIA avec colonnes quote_date | rate
+    Les taux peuvent être en format décimal (0.0225) ou pourcentage (2.25).
+    """
     df = excel_data.get('MONIA', pd.DataFrame())
+    dates, rates, source_label = None, None, None
 
     if not df.empty:
-        date_col = next((c for c in df.columns if 'date' in c.lower()), None)
-        rate_col = next((c for c in df.columns
-                         if any(x in c.lower() for x in ['rate', 'taux', 'monia'])), None)
+        cols = {c.lower().strip(): c for c in df.columns}
+        date_col = next((orig for low, orig in cols.items()
+                         if any(x in low for x in ['date','quote','dt','time'])), None)
+        rate_col = next((orig for low, orig in cols.items()
+                         if any(x in low for x in ['rate','taux','monia','tx','rendement'])), None)
+
+        if not rate_col and len(df.columns) >= 2:
+            # Fallback : prendre la 2e colonne numérique
+            num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c]) or
+                        pd.to_numeric(df[c], errors='coerce').notna().sum() > len(df)*0.5]
+            if num_cols:
+                rate_col = num_cols[-1]
+        if not date_col and len(df.columns) >= 1:
+            # Fallback : prendre la 1ère colonne comme date
+            date_col = df.columns[0]
+
         if date_col and rate_col:
-            df_plot = df[[date_col, rate_col]].copy()
-            df_plot.columns = ['date', 'rate']
-            df_plot['date'] = pd.to_datetime(df_plot['date'], errors='coerce')
-            df_plot = df_plot.dropna().sort_values('date')
-            df_plot = df_plot[df_plot['rate'] > 0]
-            if len(df_plot) > 3:
-                dates = df_plot['date']
-                rates = df_plot['rate']
-                source_label = 'Excel importé'
-            else:
-                dates, rates, source_label = None, None, None
-        else:
-            dates, rates, source_label = None, None, None
-    else:
-        dates, rates, source_label = None, None, None
+            df_p = df[[date_col, rate_col]].copy()
+            df_p.columns = ['date', 'rate']
+            df_p['date'] = pd.to_datetime(df_p['date'], errors='coerce')
+            df_p['rate'] = pd.to_numeric(df_p['rate'], errors='coerce')
+            df_p = df_p.dropna().sort_values('date')
+            # Normaliser : si les valeurs sont < 1, elles sont en décimal → convertir en %
+            if not df_p.empty and df_p['rate'].max() < 1.0:
+                df_p['rate'] = df_p['rate'] * 100
+            df_p = df_p[df_p['rate'] > 0]
+            if len(df_p) >= 2:
+                dates = df_p['date']
+                rates = df_p['rate']
+                source_label = f'Excel importé ({len(df_p)} observations, {df_p["date"].min().strftime("%d/%m/%Y")} → {df_p["date"].max().strftime("%d/%m/%Y")})'
 
     if dates is None:
         np.random.seed(7)
@@ -594,7 +616,7 @@ def build_monia_chart(excel_data):
         noise = np.random.normal(0, 0.005, 90).cumsum()
         noise = noise - noise.mean()
         rates = pd.Series(np.round(base + noise, 4), index=dates)
-        source_label = 'Données de référence'
+        source_label = 'Données de référence (importez votre Excel)'
 
     rates_s = pd.Series(rates.values if hasattr(rates, 'values') else rates)
     last_val = float(rates_s.iloc[-1])
