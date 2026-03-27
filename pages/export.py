@@ -145,9 +145,15 @@ def get_chart_masi20():
 
 def get_chart_bdt():
     try:
-        from pages.bam import build_bdt_chart
-        fig, src = build_bdt_chart(st.session_state.get('excel_data', {}))
-        fig.update_layout(title=f'Courbe des Taux BDT — {src}', height=300)
+        import importlib, pages.bam as bam_mod
+        importlib.reload(bam_mod)           # forcer rechargement = pas de cache
+        excel_data = st.session_state.get('excel_data', {})
+        fig, src = bam_mod.build_bdt_chart(excel_data)
+        fig.update_layout(
+            title=f'Courbe des Taux BDT — {src}',
+            height=320,
+            paper_bgcolor='white',
+        )
         return _fig_to_html_snippet(fig)
     except Exception as e:
         return f'<p style="color:#999;padding:20px;">BDT indisponible : {e}</p>'
@@ -155,9 +161,15 @@ def get_chart_bdt():
 
 def get_chart_monia():
     try:
-        from pages.bam import build_monia_chart
-        fig, last, delta, src = build_monia_chart(st.session_state.get('excel_data', {}))
-        fig.update_layout(title=f'Indice MONIA — {src}', height=300)
+        import importlib, pages.bam as bam_mod
+        importlib.reload(bam_mod)           # forcer rechargement = pas de cache
+        excel_data = st.session_state.get('excel_data', {})
+        fig, last, delta, src = bam_mod.build_monia_chart(excel_data)
+        fig.update_layout(
+            title=f'Indice MONIA — {src}',
+            height=320,
+            paper_bgcolor='white',
+        )
         return _fig_to_html_snippet(fig)
     except Exception as e:
         return f'<p style="color:#999;padding:20px;">MONIA indisponible : {e}</p>'
