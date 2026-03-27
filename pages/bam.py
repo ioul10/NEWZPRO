@@ -690,6 +690,15 @@ def build_fx_history_chart(fx_hist, sym='EUR'):
 def render():
     now_str = datetime.now().strftime("%d %b %Y — %H:%M")
 
+    # ── Hero ─────────────────────────────────────────────────────────────────
+    try:
+        from utils.design import page_hero, market_clock_html
+        st.markdown(page_hero('🏦','BAM — Bank Al-Maghrib',
+            'Taux Directeur · Courbe BDT · MONIA · Devises EUR/MAD · USD/MAD',
+            tags=['Taux 2.75%','BDT','MONIA','EUR/MAD','USD/MAD']), unsafe_allow_html=True)
+        st.components.v1.html(market_clock_html(), height=65)
+    except Exception:
+        pass
 
     excel_data = st.session_state.get('excel_data', {})
     fx_data    = st.session_state.get('fx_data', {})
@@ -700,6 +709,7 @@ def render():
     usd_rate = fx_data.get('USD', {}).get('rate', 9.9714)
     fx_src   = fx_data.get('source', '—')
 
+    td = BAM_POLICY['taux_directeur']  # Fix: define td in render() scope
     td_delta_class = 'red' if BAM_POLICY['taux_directeur_delta'] < 0 else 'green'
 
     st.markdown(f"""
