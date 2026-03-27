@@ -1,7 +1,6 @@
 # =============================================================================
 # NEWZ - Market Data Platform
-# Fichier Principal - app.py
-# Navigation Multi-Pages
+# app.py — Point d'entrée principal (Version 2.0)
 # =============================================================================
 
 import streamlit as st
@@ -9,145 +8,118 @@ from pathlib import Path
 import sys
 from datetime import datetime
 
-# Configuration de la page (DOIT ÊTRE LA PREMIÈRE COMMANDE)
 st.set_page_config(
     page_title="Newz | Market Data Platform",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-# Ajout du chemin pour les imports
 sys.path.append(str(Path(__file__).resolve().parent))
 
-# Import de la configuration
 try:
     from config.settings import COLORS, APP_INFO
 except ImportError:
-    COLORS = {
-        'primary': '#005696',
-        'secondary': '#003d6b',
-        'accent': '#00a8e8',
-        'success': '#28a745',
-        'warning': '#ffc107',
-        'danger': '#dc3545',
-        'light': '#f8f9fa'
-    }
-    APP_INFO = {'name': 'Newz', 'version': '0.1.0', 'author': 'OULMADANI Ilyas'}
+    COLORS   = {'primary':'#0b1e3d','secondary':'#1a56db','accent':'#06b6d4',
+                 'success':'#10b981','danger':'#ef4444','warning':'#f59e0b',
+                 'bg':'#f1f5f9','card':'#ffffff','muted':'#64748b',
+                 'border':'#e2e8f0','light':'#f8fafc'}
+    APP_INFO = {'name':'Newz','version':'2.0.0',
+                'author':'OULMADANI Ilyas & ATANANE Oussama',
+                'copyright':'© 2026 CDG Capital',
+                'confidentiality':'Usage interne uniquement',
+                'company':'CDG Capital'}
 
-# -----------------------------------------------------------------------------
-# INITIALISATION SESSION STATE
-# -----------------------------------------------------------------------------
+try:
+    from utils.design import inject_global_css
+    inject_global_css()
+except Exception:
+    pass
 
-def init_session_state():
-    """Initialise toutes les variables de session"""
-    if 'data_loaded' not in st.session_state:
-        st.session_state.data_loaded = False
-    if 'excel_data' not in st.session_state:
-        st.session_state.excel_data = {}
-    if 'bourse_data' not in st.session_state:
-        st.session_state.bourse_data = {}
-    if 'news_data' not in st.session_state:
-        st.session_state.news_data = []
-    if 'actions_data' not in st.session_state:
-        st.session_state.actions_data = None
-    if 'last_update' not in st.session_state:
-        st.session_state.last_update = None
-    if 'export_selected_sections' not in st.session_state:
-        st.session_state.export_selected_sections = ['summary', 'bdc', 'bam', 'inflation']
-    if 'report_html' not in st.session_state:
-        st.session_state.report_html = None
-    if 'top_movers' not in st.session_state:
-        st.session_state.top_movers = None
-    if 'correlation_period' not in st.session_state:
-        st.session_state.correlation_period = 90
+# ── Sidebar branding + horloge dynamique ─────────────────────────────────────
+with st.sidebar:
+    st.markdown(f"""
+    <div style="padding:20px 8px 16px 8px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:16px;">
+      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:white;letter-spacing:-0.5px;">
+        📊 NEWZ
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:rgba(255,255,255,.45);
+                  letter-spacing:2px;text-transform:uppercase;margin-top:3px;">
+        Market Data Platform
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;
+                  color:rgba(255,255,255,.35);margin-top:6px;">
+        {APP_INFO.get('company','CDG Capital')} · v{APP_INFO.get('version','2.0.0')}
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-init_session_state()
+    st.components.v1.html("""
+    <div style="text-align:center;padding:6px 0 14px 0;">
+      <div id="sc" style="font-family:'IBM Plex Mono',monospace;font-size:20px;
+           font-weight:600;color:rgba(255,255,255,.9);letter-spacing:2px;">--:--:--</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;
+           color:rgba(255,255,255,.4);margin-top:3px;letter-spacing:2px;text-transform:uppercase;">
+        Casablanca
+      </div>
+    </div>
+    <script>
+    (function(){
+      function tick(){
+        var t=new Date().toLocaleTimeString('fr-MA',{timeZone:'Africa/Casablanca',hour12:false});
+        var e=document.getElementById('sc');if(e)e.textContent=t;setTimeout(tick,1000);
+      }
+      tick();
+    })();
+    </script>
+    """, height=60)
 
-# -----------------------------------------------------------------------------
-# CSS PERSONNALISÉ
-# -----------------------------------------------------------------------------
+    st.markdown(f"""
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;
+                color:rgba(255,255,255,.35);padding:8px;text-align:center;
+                border-top:1px solid rgba(255,255,255,.08);">
+      Séance BVC : 09:00 – 15:30
+    </div>
+    """, unsafe_allow_html=True)
 
-st.markdown(f"""
-<style>
-    /* Header principal */
-    .main-header {{
-        background: linear-gradient(135deg, {COLORS['primary']} 0%, {COLORS['secondary']} 100%);
-        color: white;
-        padding: 30px;
-        border-radius: 10px;
-        margin-bottom: 20px;
-        text-align: center;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    }}
-    .main-header h1 {{
-        margin: 0;
-        font-size: 36px;
-        font-weight: 700;
-    }}
-    .main-header p {{
-        margin: 10px 0 0 0;
-        opacity: 0.9;
-        font-size: 14px;
-    }}
-    
-    /* Sidebar */
-    .stSidebar {{
-        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
-    }}
-    
-    /* Footer */
-    .footer {{
-        margin-top: 50px;
-        padding: 20px;
-        text-align: center;
-        color: #666;
-        font-size: 12px;
-        border-top: 1px solid #e0e0e0;
-    }}
-</style>
-""", unsafe_allow_html=True)
+# ── Session state ─────────────────────────────────────────────────────────────
+def init_session():
+    for k, v in [
+        ('data_loaded', False), ('excel_data', {}), ('bourse_data', {}),
+        ('bdc_indices', None), ('bdc_top_movers', None), ('bdc_last_refresh', None),
+        ('news_data', []), ('actions_data', None), ('last_update', None),
+        ('fx_data', {}), ('fx_history', {}), ('inflation_rate', None),
+        ('inflation_source', None), ('inflation_last_update', None),
+        ('report_html', None), ('report_config', {}), ('top_movers', None),
+        ('correlation_period', 90), ('news_sources_status', {}),
+    ]:
+        if k not in st.session_state:
+            st.session_state[k] = v
 
-# -----------------------------------------------------------------------------
-# HEADER
-# -----------------------------------------------------------------------------
+init_session()
 
-st.markdown(f"""
-<div class="main-header">
-    <h1>NEWZ</h1>
-    <p> Market Data Platform v{APP_INFO.get('version', '0.1.0')}</p>
-    <p style="font-size: 11px; opacity: 0.7;">{APP_INFO.get('copyright', '© 2026 CDG Capital')} | {APP_INFO.get('confidentiality')}</p>
-</div>
-""", unsafe_allow_html=True)
-
-# -----------------------------------------------------------------------------
-# NAVIGATION MULTI-PAGES
-# -----------------------------------------------------------------------------
-
-# Définir les pages de l'application
+# ── Navigation ────────────────────────────────────────────────────────────────
 pages = [
-    st.Page("pages/home.py", title="Accueil", icon="🏠"),
+    st.Page("pages/home.py",           title="Accueil",        icon="🏠"),
     st.Page("pages/data_ingestion.py", title="Data Ingestion", icon="📥"),
-    st.Page("pages/bdc_statut.py", title="BDC Statut", icon="📊"),
-    st.Page("pages/bam.py", title="BAM", icon="🏦"),
-    st.Page("pages/macronews.py", title="Macronews", icon="📰"),
-    st.Page("pages/export.py", title="Export", icon="📤"),
+    st.Page("pages/bdc_statut.py",     title="BDC Statut",     icon="📈"),
+    st.Page("pages/bam.py",            title="BAM",            icon="🏦"),
+    st.Page("pages/macronews.py",      title="Macronews",      icon="📰"),
+    st.Page("pages/export.py",         title="Export",         icon="📤"),
 ]
-
-# Créer la navigation (affichage automatique dans la sidebar)
 pg = st.navigation(pages)
-
-# Exécuter la page sélectionnée
 pg.run()
 
-# -----------------------------------------------------------------------------
-# FOOTER
-# -----------------------------------------------------------------------------
-
+# ── Footer ────────────────────────────────────────────────────────────────────
 st.markdown(f"""
-<div class="footer">
-    <p><b>{APP_INFO.get('name', 'Newz')} v{APP_INFO.get('version', '0.1.0')}</b> | {APP_INFO.get('author', 'CDG Capital - OULMADANI Ilyas & ATANANE Oussama')}</p>
-    <p>Dernière mise à jour : {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}</p>
-    <p>Données : Bourse de Casablanca | Bank Al-Maghrib | HCP | Ilboursa</p>
+<div style="margin-top:48px;padding:14px 24px;
+            border-top:1px solid {COLORS.get('border','#e2e8f0')};
+            display:flex;justify-content:space-between;align-items:center;
+            flex-wrap:wrap;gap:8px;font-family:'IBM Plex Mono',monospace;
+            font-size:10px;color:{COLORS.get('muted','#64748b')};">
+  <span><b style="color:{COLORS.get('primary','#0b1e3d')};">{APP_INFO.get('name','Newz')}</b>
+    v{APP_INFO.get('version','2.0.0')} · {APP_INFO.get('author','')} · {APP_INFO.get('copyright','')}</span>
+  <span>{APP_INFO.get('confidentiality','Usage interne')}</span>
+  <span id="footer-time">{datetime.now().strftime('%d/%m/%Y %H:%M')}</span>
 </div>
 """, unsafe_allow_html=True)
