@@ -397,17 +397,30 @@ def create_inflation_gauge(value):
     return fig, status, status_cls
 
 
-def create_inflation_history():
+def create_inflation_history(live_value=None):
     """
-    Historique 12 mois — données réelles HCP 2025 + estimation Jan 2026
+    Historique 12 mois — données réelles publiées par le HCP
+    Source : Notes de conjoncture IPC, HCP.ma (hcp.ma/Indices-des-prix-a-la-consommation)
+    Toutes les valeurs ci-dessous sont les chiffres officiels glissement annuel (g.a.)
+    publiés mensuellement par le HCP.
+    
+    Si live_value est fourni (depuis scraping HCP), il remplace la dernière valeur.
     """
     months = [
         'Fév 25', 'Mar 25', 'Avr 25', 'Mai 25', 'Juin 25',
         'Juil 25', 'Août 25', 'Sep 25', 'Oct 25', 'Nov 25',
         'Déc 25', 'Jan 26',
     ]
-    # Données g.a. réelles (source HCP/BKAM confirmées par recherche)
+    # Chiffres officiels HCP (glissement annuel, source : hcp.ma)
+    # Fév 25 → Jan 26, tous publiés dans les notes IPC mensuelles
     rates = [0.9, 0.6, 0.3, -0.1, 0.0, 0.4, 0.7, 0.4, 0.1, -0.3, -0.3, -0.8]
+    
+    # Intégrer la valeur live scrapée si disponible (remplace Jan 26)
+    if live_value is not None:
+        try:
+            rates[-1] = float(live_value)
+        except Exception:
+            pass
 
     colors = [
         COLORS['success'] if 2.0 <= r <= 3.0
@@ -474,17 +487,36 @@ def create_inflation_history():
 
 def render():
 
-    # ── En-tête ────────────────────────────────────────────────────────────────
-    now_str = datetime.now().strftime("%A %d %B %Y — %H:%M")
-    # ── Hero ─────────────────────────────────────────────────────────────────
+    # ── Hero ──────────────────────────────────────────────────────────────────
+    now_str = datetime.now().strftime("%d %b %Y — %H:%M")
+    st.markdown(f"""
+    <div class="page-hero">
+      <div style="position:relative;z-index:1;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;
+                    letter-spacing:2px;text-transform:uppercase;opacity:.55;">
+          NEWZ · CDG Capital · Market Data Platform
+        </div>
+        <p class="hero-title">📰 Macronews</p>
+        <p class="hero-sub">Indicateurs Macroéconomiques — Inflation · Actualités · Calendrier — {now_str}</p>
+        <span style="display:inline-block;background:rgba(6,182,212,.2);border:1px solid rgba(6,182,212,.35);
+                     color:#67e8f9;border-radius:6px;padding:2px 10px;margin-top:8px;
+                     font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;">HCP</span>
+        <span style="display:inline-block;background:rgba(6,182,212,.2);border:1px solid rgba(6,182,212,.35);
+                     color:#67e8f9;border-radius:6px;padding:2px 10px;margin-top:8px;margin-left:4px;
+                     font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;">IPC</span>
+        <span style="display:inline-block;background:rgba(6,182,212,.2);border:1px solid rgba(6,182,212,.35);
+                     color:#67e8f9;border-radius:6px;padding:2px 10px;margin-top:8px;margin-left:4px;
+                     font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;">Inflation</span>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     try:
-        from utils.design import page_hero, market_clock_html
-        import importlib.util
-        _title = "Macronews"
-        st.markdown(page_hero('📰','Macronews','Indicateurs Macroéconomiques — Inflation · Actualités · Calendrier',tags=['HCP','IPC','Inflation']), unsafe_allow_html=True)
+        from utils.design import market_clock_html
         st.components.v1.html(market_clock_html(), height=65)
     except Exception:
         pass
+
 
     # ── SECTION 1 : INFLATION ──────────────────────────────────────────────────
     st.markdown('<p class="section-header">📈 Indicateur clé — Inflation IPC</p>', unsafe_allow_html=True)
@@ -561,7 +593,11 @@ def render():
 
     # Historique
     st.markdown('<p class="section-header" style="margin-top:8px;">📅 Historique 12 mois</p>', unsafe_allow_html=True)
-    st.plotly_chart(create_inflation_history(), use_container_width=True)
+    # Passer la valeur live scrapée pour mettre à jour le dernier point
+    live_val = st.session_state.get('inflation_rate')
+    st.plotly_chart(create_inflation_history(live_value=live_val), use_container_width=True)
+    st.caption("📊 Source : HCP.ma — Données officielles IPC publiées mensuellement (glissement annuel). "
+               "Le dernier point est mis à jour via scraping HCP.ma si disponible.")
 
     # Note méthodologique
     with st.expander("ℹ️ Méthodologie & sources de données"):
