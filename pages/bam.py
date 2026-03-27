@@ -473,9 +473,10 @@ def build_bdt_chart(excel_data):
         if tenor_key and rate_key:
             df_w = df_courbe[[tenor_key, rate_key]].copy()
             if date_key:
-                df_w[date_key] = pd.to_datetime(df_courbe[date_key], errors='coerce')
-                df_w = df_w[df_courbe[date_key] == df_courbe[date_key].dropna().max()]
-            df_w.columns = ['tenor', 'rate'] if date_key is None else ['tenor', 'rate']
+                dates_parsed = pd.to_datetime(df_courbe[date_key], errors='coerce')
+                mask = dates_parsed == dates_parsed.dropna().max()
+                df_w = df_courbe.loc[mask, [tenor_key, rate_key]].copy()
+            df_w.columns = ['tenor', 'rate'] 
             df_w = df_w[['tenor','rate']].dropna()
             df_w['rate'] = pd.to_numeric(df_w['rate'], errors='coerce')
             df_w = df_w.dropna().drop_duplicates('tenor')
