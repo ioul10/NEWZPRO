@@ -17,6 +17,13 @@ import re
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+try:
+    from utils.design import inject_global_css, market_clock_html, page_hero
+    inject_global_css()
+except Exception:
+    pass
+
+
 _COLORS_DEFAULTS = {
     'primary':   '#0a2540',
     'secondary': '#00a8e8',
@@ -36,85 +43,7 @@ try:
 except ImportError:
     COLORS = _COLORS_DEFAULTS
 
-# ─── STYLE GLOBAL ─────────────────────────────────────────────────────────────
-
-st.markdown(f"""
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
-
-  html, body, [class*="css"] {{
-      font-family: 'DM Sans', sans-serif;
-      background: {COLORS['bg']};
-  }}
-  .metric-card {{
-      background: {COLORS['card']};
-      border-radius: 14px;
-      padding: 22px 26px;
-      box-shadow: 0 1px 4px rgba(0,0,0,.07);
-      border-left: 4px solid {COLORS['secondary']};
-      margin-bottom: 16px;
-  }}
-  .metric-card.danger  {{ border-left-color: {COLORS['danger']}; }}
-  .metric-card.success {{ border-left-color: {COLORS['success']}; }}
-  .metric-card.warning {{ border-left-color: {COLORS['warning']}; }}
-
-  .section-header {{
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      letter-spacing: 2.5px;
-      text-transform: uppercase;
-      color: {COLORS['muted']};
-      margin: 32px 0 16px 0;
-  }}
-  .page-title {{
-      font-size: 28px;
-      font-weight: 700;
-      color: {COLORS['primary']};
-      margin: 0;
-  }}
-  .page-sub {{
-      font-size: 14px;
-      color: {COLORS['muted']};
-      margin-top: 6px;
-  }}
-  .news-card {{
-      background: {COLORS['card']};
-      border-radius: 12px;
-      padding: 18px 22px;
-      margin-bottom: 12px;
-      border: 1px solid #e8ecf0;
-      transition: box-shadow .2s;
-  }}
-  .news-card:hover {{ box-shadow: 0 4px 16px rgba(0,0,0,.09); }}
-  .news-title {{ font-size: 15px; font-weight: 600; color: {COLORS['primary']}; }}
-  .news-meta  {{ font-size: 12px; color: {COLORS['muted']}; margin-top: 4px; }}
-  .badge {{
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      margin-right: 6px;
-  }}
-  .badge-high    {{ background: #ffe0e6; color: {COLORS['danger']}; }}
-  .badge-medium  {{ background: #fff3cd; color: #856404; }}
-  .badge-low     {{ background: #d4edda; color: #155724; }}
-  .badge-source  {{ background: #e8f0fe; color: {COLORS['accent']}; }}
-  .source-bar {{
-      background: {COLORS['card']};
-      border-radius: 10px;
-      padding: 10px 16px;
-      font-size: 12px;
-      color: {COLORS['muted']};
-      border: 1px dashed #d1d9e0;
-      margin-top: 8px;
-  }}
-  div[data-testid="stExpander"] {{
-      border: 1px solid #e8ecf0 !important;
-      border-radius: 10px !important;
-  }}
-</style>
-""", unsafe_allow_html=True)
+# CSS injected via utils/design.py
 
 # ─── CACHE CONFIG ──────────────────────────────────────────────────────────────
 
@@ -547,6 +476,15 @@ def render():
 
     # ── En-tête ────────────────────────────────────────────────────────────────
     now_str = datetime.now().strftime("%A %d %B %Y — %H:%M")
+    # ── Hero ─────────────────────────────────────────────────────────────────
+    try:
+        from utils.design import page_hero, market_clock_html
+        import importlib.util
+        _title = "Macronews"
+        st.markdown(page_hero('📰','Macronews','Indicateurs Macroéconomiques — Inflation · Actualités · Calendrier',tags=['HCP','IPC','Inflation']), unsafe_allow_html=True)
+        st.components.v1.html(market_clock_html(), height=65)
+    except Exception:
+        pass
     st.markdown(f"""
     <div style="display:flex; justify-content:space-between; align-items:flex-start;
                 background:white; padding:24px 30px; border-radius:16px;
