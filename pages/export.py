@@ -68,84 +68,77 @@ def _fig_to_html_snippet(fig):
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 
+def _fetch_index_history_for_report(ticker, label, color_hex, fallback_base):
+    """
+    Récupère l'historique d'un indice via yfinance pour le rapport.
+    Même source que bdc_statut.py → graphiques cohérents.
+    """
+    import plotly.graph_objects as go
+    dates, vals, note = None, None, None
+
+    # 1. Essayer yfinance (même source que BDC Statut)
+    try:
+        import yfinance as yf
+        hist = yf.Ticker(ticker).history(period='1mo')
+        if not hist.empty:
+            dates = [str(d.date()) for d in hist.index]
+            vals  = list(hist['Close'].round(2))
+            note  = 'Yahoo Finance'
+    except Exception:
+        pass
+
+    # 2. Fallback : utiliser la valeur courante de session_state
+    if not dates:
+        bourse = st.session_state.get('bdc_indices') or st.session_state.get('bourse_data', {})
+        if isinstance(bourse, dict):
+            key  = 'masi' if 'MASI' in ticker and '20' not in ticker else 'masi20'
+            base = bourse.get(key, {}).get('value', fallback_base)
+        else:
+            base = fallback_base
+        # Simuler une courbe autour de la vraie valeur actuelle
+        np.random.seed(hash(ticker) % 9999)
+        n    = 22  # ~1 mois jours ouvrés
+        base = float(base) if base else fallback_base
+        vals  = list(np.round(base + np.cumsum(np.random.normal(0, base*0.007, n)), 2))
+        dates = [str((datetime.now()-timedelta(days=n-i)).date()) for i in range(n)]
+        note  = 'Simulé (yfinance indisponible)'
+
+    min_v, max_v = min(vals), max(vals)
+    pad = (max_v - min_v) * 0.15 or max_v * 0.02
+    r,g,b = int(color_hex[1:3],16), int(color_hex[3:5],16), int(color_hex[5:7],16)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=dates, y=vals, mode='lines',
+        line=dict(color=color_hex, width=2.5),
+        fill='tozeroy', fillcolor=f'rgba({r},{g},{b},0.07)',
+        hovertemplate='%{x}<br><b>'+label+' : %{y:,.2f}</b><extra></extra>',
+    ))
+    fig.update_layout(
+        title=f'Évolution {label} — 1 mois', height=300,
+        margin=dict(l=55, r=20, t=40, b=40),
+        plot_bgcolor='white', paper_bgcolor='white',
+        xaxis=dict(showgrid=False, tickfont=dict(size=10)),
+        yaxis=dict(showgrid=True, gridcolor='#eee', tickformat=',.0f',
+                   range=[min_v-pad, max_v+pad], tickfont=dict(size=10), zeroline=False),
+        annotations=[dict(text=f'Source : {note}', showarrow=False,
+                          x=1, y=0, xref='paper', yref='paper',
+                          xanchor='right', yanchor='bottom',
+                          font=dict(size=9, color='#94a3b8'))],
+    )
+    return _fig_to_html_snippet(fig)
+
+
 def get_chart_masi():
     try:
-        import plotly.graph_objects as go
-        bourse  = st.session_state.get('bourse_data', {})
-        actions = st.session_state.get('actions_data')
-
-        if actions is not None and not actions.empty:
-            col  = actions.columns[0]
-            base = bourse.get('masi', {}).get('value', float(actions[col].iloc[-1]))
-            norm = (actions[col] / actions[col].iloc[0]) * base
-            dates = [str(d) for d in actions.index]
-            vals  = list(norm.round(2))
-        else:
-            base = bourse.get('masi', {}).get('value', 17243.58)
-            np.random.seed(1); n = 30
-            ret  = np.random.normal(0.0002, 0.007, n)
-            vals = list(np.round(base * np.ones(n) + np.cumsum(np.random.normal(0, 80, n)), 2))
-            dates= [str((datetime.now()-timedelta(days=n-i)).date()) for i in range(n)]
-
-        min_v, max_v = min(vals), max(vals)
-        pad = (max_v - min_v) * 0.15 or max_v * 0.02
-
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=dates, y=vals, mode='lines',
-            line=dict(color='#0b1e3d', width=2.5),
-            fill='tozeroy', fillcolor='rgba(11,30,61,0.07)',
-            hovertemplate='%{x}<br><b>%{y:,.2f}</b><extra></extra>',
-        ))
-        fig.update_layout(
-            title='Évolution MASI (30 jours)', height=300,
-            margin=dict(l=55, r=20, t=40, b=40),
-            plot_bgcolor='white', paper_bgcolor='white',
-            xaxis=dict(showgrid=False, tickfont=dict(size=10)),
-            yaxis=dict(showgrid=True, gridcolor='#eee', tickformat=',.0f',
-                       range=[min_v-pad, max_v+pad], tickfont=dict(size=10)),
-        )
-        return _fig_to_html_snippet(fig)
+        return _fetch_index_history_for_report('^MASI', 'MASI', '#0b1e3d', 17243.58)
     except Exception as e:
         return f'<p style="color:#999;padding:20px;">MASI indisponible : {e}</p>'
 
 
 def get_chart_masi20():
     try:
-        import plotly.graph_objects as go
-        bourse  = st.session_state.get('bourse_data', {})
-        actions = st.session_state.get('actions_data')
-        base    = bourse.get('masi20', {}).get('value', 1358.42)
-
-        if actions is not None and not actions.empty and len(actions.columns) >= 2:
-            proxy = actions.iloc[:, :min(5, len(actions.columns))].mean(axis=1)
-            norm  = (proxy / proxy.iloc[0]) * base
-            dates = [str(d) for d in actions.index]
-            vals  = list(norm.round(2))
-        else:
-            np.random.seed(2); n = 30
-            vals  = list(np.round(base * np.ones(n) + np.cumsum(np.random.normal(0, 8, n)), 2))
-            dates = [str((datetime.now()-timedelta(days=n-i)).date()) for i in range(n)]
-
-        min_v, max_v = min(vals), max(vals)
-        pad = (max_v - min_v) * 0.15 or max_v * 0.02
-
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=dates, y=vals, mode='lines',
-            line=dict(color='#1a56db', width=2.5),
-            fill='tozeroy', fillcolor='rgba(26,86,219,0.07)',
-            hovertemplate='%{x}<br><b>%{y:,.2f}</b><extra></extra>',
-        ))
-        fig.update_layout(
-            title='Évolution MASI 20 (30 jours)', height=300,
-            margin=dict(l=55, r=20, t=40, b=40),
-            plot_bgcolor='white', paper_bgcolor='white',
-            xaxis=dict(showgrid=False, tickfont=dict(size=10)),
-            yaxis=dict(showgrid=True, gridcolor='#eee', tickformat=',.2f',
-                       range=[min_v-pad, max_v+pad], tickfont=dict(size=10)),
-        )
-        return _fig_to_html_snippet(fig)
+        return _fetch_index_history_for_report('^MASI20', 'MASI 20', '#1a56db', 1358.42)
     except Exception as e:
         return f'<p style="color:#999;padding:20px;">MASI20 indisponible : {e}</p>'
 
