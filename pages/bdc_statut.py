@@ -477,14 +477,6 @@ def render():
         st.components.v1.html(market_clock_html(), height=65)
     except Exception:
         pass
-    st.markdown(f"""
-    <div class="page-hero">
-      <div style="position:relative;z-index:1;">
-        <p class="hero-title">📥 Data Ingestion</p>
-        <p class="hero-sub">Import · Scraping · Validation — {now_str}</p>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
 
     # ── Dashboard d'état ───────────────────────────────────────────────────────
     excel_data  = st.session_state.excel_data
