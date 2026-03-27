@@ -269,19 +269,19 @@ def market_clock_html():
 
     if day in wdays and open_ <= t <= close:
         is_open = True
-        label   = '🟢 Marché Ouvert'
+        label   = 'Marché Ouvert'
         info    = 'Séance en cours — Clôture 15:30'
     elif day in wdays and t < open_:
         is_open = False
-        label   = '🔴 Pré-ouverture'
+        label   = 'Pré-ouverture'
         info    = f'Ouverture à 09:00'
     elif day not in wdays:
         is_open = False
-        label   = '🔴 Week-end'
+        label   = 'Week-end'
         info    = 'Reprise lundi à 09:00'
     else:
         is_open = False
-        label   = '🔴 Clôture'
+        label   = 'Clôture'
         info    = 'Prochaine séance demain 09:00'
 
     cls = 'open' if is_open else 'closed'
