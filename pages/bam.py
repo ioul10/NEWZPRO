@@ -23,6 +23,13 @@ import time
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
+try:
+    from utils.design import inject_global_css, market_clock_html, page_hero
+    inject_global_css()
+except Exception:
+    pass
+
+
 # ─── CONFIG (merge safe) ──────────────────────────────────────────────────────
 
 _DEFAULTS = {
@@ -683,20 +690,6 @@ def build_fx_history_chart(fx_hist, sym='EUR'):
 def render():
     now_str = datetime.now().strftime("%d %b %Y — %H:%M")
 
-    # ── Hero ───────────────────────────────────────────────────────────────────
-    td   = BAM_POLICY['taux_directeur']
-    note = BAM_POLICY['note']
-    st.markdown(f"""
-    <div class="page-hero">
-      <div style="position:relative;z-index:1;">
-        <p class="hero-title">🏦 Bank Al-Maghrib</p>
-        <p class="hero-sub">Politique monétaire · Courbe BDT · MONIA · Devises — {now_str}</p>
-        <span class="hero-tag">Taux directeur {td:.2f}%</span>
-        <span class="hero-tag">MASI ESG</span>
-        <span class="hero-tag">BAM</span>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
 
     excel_data = st.session_state.get('excel_data', {})
     fx_data    = st.session_state.get('fx_data', {})
